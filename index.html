@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <title>Charter Rush</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
 <style>
 /* Layout: full-screen 3D lagoon; HUD panels float over it. Single dark arcade theme by choice (GTA-style HUD: condensed yellow display, dark glass panels). */
@@ -73,6 +73,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
 .pad button:active,.pad button.down{background:var(--yellow);color:#111}
 @media (hover:hover) and (pointer:fine){.pad{display:none}}
 .overlay{position:fixed;inset:0;background:rgba(5,14,22,.86);display:grid;place-items:center;padding:16px;z-index:20}
+[hidden]{display:none !important}
 .overlay[hidden]{display:none}
 .card{touch-action:pan-y;background:#102235;border:1.5px solid var(--line);border-radius:16px;padding:22px;max-width:540px;width:100%;display:flex;flex-direction:column;gap:12px;max-height:92vh;overflow:auto}
 .card h2{margin:0;font-family:var(--display);font-size:clamp(30px,7vw,46px);color:var(--yellow);line-height:.95;text-transform:uppercase;text-wrap:balance}
