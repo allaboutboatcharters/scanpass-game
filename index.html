@@ -90,6 +90,51 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--yellow);color:#111;padding:9px 16px;border-radius:999px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:30;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* phones: touch copy, compact HUD, portrait + landscape layouts */
+.hs,.kb{display:none}
+@media (hover:hover) and (pointer:fine){.kb{display:inline}.tc{display:none}}
+@media (max-width:700px),(max-height:500px){
+  .hl{display:none}.hs{display:inline}
+  .topL{gap:10px;left:max(12px,env(safe-area-inset-left,0px))}
+  .topL .stat b{font-size:22px}
+  .topL .stat span{font-size:9px}
+  .clock{font-size:18px}
+  #map{width:110px;height:80px}
+  .role button,.guest,.boatsel button,.actions button,.btn{min-height:44px}
+  .actions{margin-top:6px}
+  .actions button,.btn{min-width:0;padding:6px 8px;font-size:13px;line-height:1.2}
+  .boatsel button{padding:4px 12px}
+  .panel{padding:8px 10px}
+  .desk{gap:6px;overflow:auto;touch-action:pan-y;overscroll-behavior:contain}
+  .desk .queue{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-height:none;touch-action:pan-x}
+  .guest{flex:none}
+  .fields{grid-template-columns:repeat(3,1fr)}
+  .field .v{font-size:11px}
+  .hint{margin-top:4px}
+  .helm .info b{font-size:22px}
+}
+@media (max-width:700px) and (min-height:501px){
+  .topR{right:max(12px,env(safe-area-inset-right,0px))}
+  .role{top:calc(max(10px,env(safe-area-inset-top,0px)) + 46px);left:max(12px,env(safe-area-inset-left,0px));transform:none}
+  .desk{left:max(8px,env(safe-area-inset-left,0px));right:max(8px,env(safe-area-inset-right,0px));bottom:max(8px,env(safe-area-inset-bottom,0px));max-height:56vh;max-height:56dvh}
+  .helm{left:max(8px,env(safe-area-inset-left,0px));right:max(8px,env(safe-area-inset-right,0px));flex-direction:column;align-items:stretch;gap:8px}
+  .helm .info{display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px}
+  #handover{margin:0 0 0 auto!important}
+  .pad{justify-content:center}
+  .pad button{width:64px;height:64px}
+}
+@media (max-height:500px){
+  .topR{right:auto;left:max(16px,env(safe-area-inset-left,0px));top:calc(max(10px,env(safe-area-inset-top,0px)) + 48px);align-items:flex-start}
+  .role{left:auto;right:calc(max(16px,env(safe-area-inset-right,0px)) + 372px);transform:none}
+  .desk{left:auto;right:max(16px,env(safe-area-inset-right,0px));top:max(8px,env(safe-area-inset-top,0px));bottom:max(8px,env(safe-area-inset-bottom,0px));width:360px;max-width:none;margin:0;grid-template-columns:1fr;align-content:start}
+  .panel{padding:6px 10px}
+  .panel h3{margin-bottom:4px;font-size:14px}
+  .boatsel{margin-bottom:4px}
+  .actions{margin-top:4px}
+  .fields{gap:2px 6px}
+  .hint{min-height:0;font-size:11px;margin-top:2px}
+  .unlock{margin-top:4px;padding:4px 6px;font-size:12px;gap:6px}
+}
 </style>
 
 <canvas id="c"></canvas>
@@ -146,7 +191,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   </div>
 
   <div class="helm" id="helm" hidden>
-    <div class="info"><div class="eyebrow" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)" id="hBoat">Rum Bum</div><b id="hSpeed">0 kn</b><div id="hNext">Next: Stop 1</div><button class="btn btn-ghost" id="handover" style="margin-top:6px;flex:0;min-width:0">Hand over to Alex, back to desk</button></div>
+    <div class="info"><div class="eyebrow" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)" id="hBoat">Rum Bum</div><b id="hSpeed">0 kn</b><div id="hNext">Next: Stop 1</div><button class="btn btn-ghost" id="handover" style="margin-top:6px;flex:0;min-width:0"><span class="hl">Hand over to Alex, back to desk</span><span class="hs">Back to desk</span></button></div>
     <div class="pad"><button id="pL">◀</button><button id="pR">▶</button><button id="pB">▼</button><button id="pF">▲</button></div>
   </div>
 </div>
@@ -157,7 +202,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     <h2>Run the dock. Drive the boat.</h2>
     <p><b>Manager:</b> guests queue with passports. Copy each passport into the boat's crew &amp; passenger list (five fields by hand, typos happen), then cast off. Guests who wait too long walk away.</p>
     <p><b>Captain:</b> take the helm yourself. Hit all 5 tour stops (the yellow markers) and bring the boat back to the dock. Fast trips earn tips. Or let Captain Alex drive while you keep the desk moving.</p>
-    <p>Drive with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows, <kbd>Tab</kbd> switches role. On a phone use the buttons.</p>
+    <p><span class="kb">Drive with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows, <kbd>Tab</kbd> switches role. On a phone use the buttons.</span><span class="tc">Steer with the on-screen arrows. The Manager / Captain buttons at the top switch roles.</span></p>
     <p>A bad list gets fined by the coast guard at the first stop. Somewhere along the day, Captain Alex will suggest an app.</p>
     <button class="btn btn-go" id="startBtn">Open the dock</button>
   </div>
