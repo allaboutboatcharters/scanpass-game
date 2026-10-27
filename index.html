@@ -204,6 +204,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     <p><b>Captain:</b> take the helm yourself. Hit all 5 tour stops (the yellow markers) and bring the boat back to the dock. Fast trips earn tips. Or let Captain Alex drive while you keep the desk moving.</p>
     <p><span class="kb">Drive with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows, <kbd>Tab</kbd> switches role. On a phone use the buttons.</span><span class="tc">Steer with the on-screen arrows. The Manager / Captain buttons at the top switch roles.</span></p>
     <p>A bad list gets fined by the coast guard at the first stop. Somewhere along the day, Captain Alex will suggest an app.</p>
+    <p>Last guests arrive at 15:00. The day ends when both boats are back at the dock.</p>
     <button class="btn btn-go" id="startBtn">Open the dock</button>
   </div>
 </div>
@@ -219,6 +220,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
       <div><b id="rFines">$0</b><span>Fines</span></div>
       <div><b id="rManual">—</b><span>Manual check-in</span></div>
       <div><b id="rScan">—</b><span>ScanPass check-in</span></div>
+      <div id="rUnpaidBox" hidden><b id="rUnpaid">0</b><span>Not paid · still on a boat</span></div>
     </div>
     <p id="endNote"></p>
     <div class="cta"><b>Real dock, real paperwork?</b><span>ScanPass reads the passport on your iPhone, no cloud, no per-scan fees, and exports the crew &amp; passenger list as XLSX or PDF.</span><a href="https://scanpass.pro" target="_blank" rel="noopener">scanpass.pro → get launch updates</a></div>
@@ -234,7 +236,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   const FIRST=["Maria","Jonas","Priya","Lucas","Amara","Tomasz","Sofia","Ethan","Chloé","Ravi","Ingrid","Mateo","Hana","Noah","Leila","Finn","Olivia","Kwame","Elena","Oscar","Yuki","Liam","Nadia","Pierre"];
   const LAST=["Becker","Okafor","Smirnov","Lindqvist","Dubois","Patel","Moreau","Nakamura","Fernandes","Kowalski","Johansson","Reyes","Haddad","Brown","Costa","Novak","Schmidt","Osei","Petrov","Laurent"];
   const NAT=["DEU","NLD","FRA","USA","CAN","GBR","SWE","ITA","ESP","BRA","IND","JPN"];
-  const PRICE=120,FINE=150,TIP=40,PATIENCE=75,DAY=330,MANUAL_STEP=1000,SCAN_STEP=700,FIELDS=5;
+  const PRICE=120,FINE=150,TIP=40,PATIENCE=75,ARRIVALS_END=300,DAY_HARD=420,MANUAL_STEP=1000,SCAN_STEP=700,FIELDS=5;
   const rnd=a=>a[Math.floor(Math.random()*a.length)];
   const pad=n=>String(n).padStart(2,"0");
   const DOCK={x:0,z:118};
@@ -464,6 +466,8 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     $("goMe").disabled=$("goAlex").disabled=!b||!b.list.length||S.busy;
     $("deskMode").textContent=S.scan?"ScanPass · on-device":"manual entry";
     $("hint").textContent=!b?"No boat at the dock. Guests are waiting…":!g?"Next guest steps up automatically.":S.scan?(done?(dupShown?"Duplicate caught before it reached the list.":"All fields read. Add to list."):"Point the camera at the data page."):S.bad>=0?"That field came out wrong. Fix it, or the coast guard will.":done?"All typed. Add to list — did you check the fields?":`Field ${S.step+1} of ${FIELDS}.`
+    const ch=closingHint(b);
+    if(ch)$("hint").textContent=ch;
   }
   function renderHUD(){
     $("cash").textContent="$"+S.cash;
@@ -759,7 +763,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   function tick(dt){
     if(S.over)return;
     S.t+=dt;
-    if(S.t>=S.nextArr&&S.guests.filter(g=>!g.done).length<9){
+    if(S.t<ARRIVALS_END&&S.t>=S.nextArr&&S.guests.filter(g=>!g.done).length<9){
       const q=S.guests.filter(g=>!g.done);
       const dup=q.length>2&&Math.random()<.15?rnd(S.guests.filter(g=>g.done&&!g.dup)):null;
       mkGuest(dup);
@@ -782,7 +786,11 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     S.boats.forEach(b=>stepBoat(b,dt));
     if(S.role==="manager")autoSelect();
     $("roleC").disabled=!S.boats.some(b=>b.state!=="dock");
-    if(S.t>=DAY)endGame();
+    if(S.t>=ARRIVALS_END-10&&!S.lastCall){
+      S.lastCall=true;
+      mission("Last guests at 15:00","Then the dock closes. Bring the boats home.",3000)
+    }
+    if(S.t>=DAY_HARD||(S.t>=ARRIVALS_END&&!S.guests.some(g=>!g.done)&&S.boats.every(b=>b.state==="dock"&&!b.list.length)))endGame();
     // water
     for(let i=0;i<wpos.count;i++){
       const x=wbase[i*3],z=wbase[i*3+2];
@@ -807,6 +815,8 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   function renderDeskLight(){
     const b=curBoat();
     $("goMe").disabled=$("goAlex").disabled=!b||!b.list.length||S.busy;
+    const ch=closingHint(b);
+    if(ch&&S.role==="manager")$("hint").textContent=ch;
     if(S.role==="captain"){
       const i=input();
       $("hSpeed").textContent=Math.round(Math.abs(S.ctl.v)*1.2)+" kn"
@@ -871,8 +881,15 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     }
   }
 
+  function closingHint(b){
+    if(S.t<ARRIVALS_END||S.sel||S.guests.some(g=>!g.done))return null;
+    return b&&b.list.length?"Dock closed. Cast off the last trip.":"Dock closed. Waiting for the boats to come home."
+  }
   function endGame(){
     S.over=true;
+    const unpaid=S.boats.reduce((a,b)=>a+b.list.filter(x=>!x.g.dup).length,0);
+    $("rUnpaid").textContent=unpaid;
+    $("rUnpaidBox").hidden=!unpaid;
     const avg=a=>a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(1)+"s":"—";
     $("rCash").textContent="$"+S.cash;
     $("rBoarded").textContent=S.boarded;
@@ -929,7 +946,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
       get S(){return S},
       newGame,start,setRole,castOff,select,arrive,endGame,tick,mission,
       renderDesk,renderQueue,curBoat,target,
-      STOPS,DOCK,LAND
+      STOPS,DOCK,LAND,ARRIVALS_END,DAY_HARD,closingHint
     }
   }
 })();
