@@ -878,5 +878,14 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   renderQueue();
   drawMap();
   requestAnimationFrame(frame);
+  /* ---------- DEBUG (?debug=1): read-only state + hooks for automated tests ---------- */
+  if(new URLSearchParams(location.search).get("debug")==="1"){
+    window.__CR={
+      get S(){return S},
+      newGame,start,setRole,castOff,select,arrive,endGame,tick,mission,
+      renderDesk,renderQueue,curBoat,target,
+      STOPS,DOCK,LAND
+    }
+  }
 })();
 </script>
