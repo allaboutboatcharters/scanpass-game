@@ -185,198 +185,698 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function(){
-const $=id=>document.getElementById(id);
-const FIRST=["Maria","Jonas","Priya","Lucas","Amara","Tomasz","Sofia","Ethan","Chloé","Ravi","Ingrid","Mateo","Hana","Noah","Leila","Finn","Olivia","Kwame","Elena","Oscar","Yuki","Liam","Nadia","Pierre"];
-const LAST=["Becker","Okafor","Smirnov","Lindqvist","Dubois","Patel","Moreau","Nakamura","Fernandes","Kowalski","Johansson","Reyes","Haddad","Brown","Costa","Novak","Schmidt","Osei","Petrov","Laurent"];
-const NAT=["DEU","NLD","FRA","USA","CAN","GBR","SWE","ITA","ESP","BRA","IND","JPN"];
-const PRICE=120,FINE=150,TIP=40,PATIENCE=75,DAY=330,MANUAL_STEP=1000,SCAN_STEP=700,FIELDS=5;
-const rnd=a=>a[Math.floor(Math.random()*a.length)];const pad=n=>String(n).padStart(2,"0");
-const DOCK={x:0,z:118};
-const STOPS=[{x:-110,z:40,n:"Mullet Bay"},{x:-70,z:-70,n:"Maho reef"},{x:40,z:-95,n:"Cupecoy"},{x:120,z:-20,n:"Snorkel spot"},{x:95,z:70,n:"Sunset bar"}];
-const LAND=[{x:0,z:185,r:62},{x:-90,z:165,r:60},{x:95,z:170,r:60},{x:175,z:120,r:55},{x:190,z:-20,r:48},{x:-190,z:-10,r:48},{x:-175,z:110,r:50},{x:0,z:-165,r:60},{x:-110,z:-150,r:50},{x:110,z:-150,r:50},{x:-10,z:-10,r:16}];
+  const $=id=>document.getElementById(id);
+  const FIRST=["Maria","Jonas","Priya","Lucas","Amara","Tomasz","Sofia","Ethan","Chloé","Ravi","Ingrid","Mateo","Hana","Noah","Leila","Finn","Olivia","Kwame","Elena","Oscar","Yuki","Liam","Nadia","Pierre"];
+  const LAST=["Becker","Okafor","Smirnov","Lindqvist","Dubois","Patel","Moreau","Nakamura","Fernandes","Kowalski","Johansson","Reyes","Haddad","Brown","Costa","Novak","Schmidt","Osei","Petrov","Laurent"];
+  const NAT=["DEU","NLD","FRA","USA","CAN","GBR","SWE","ITA","ESP","BRA","IND","JPN"];
+  const PRICE=120,FINE=150,TIP=40,PATIENCE=75,DAY=330,MANUAL_STEP=1000,SCAN_STEP=700,FIELDS=5;
+  const rnd=a=>a[Math.floor(Math.random()*a.length)];
+  const pad=n=>String(n).padStart(2,"0");
+  const DOCK={x:0,z:118};
+  const STOPS=[{x:-110,z:40,n:"Mullet Bay"},{x:-70,z:-70,n:"Maho reef"},{x:40,z:-95,n:"Cupecoy"},{x:120,z:-20,n:"Snorkel spot"},{x:95,z:70,n:"Sunset bar"}];
+  const LAND=[{x:0,z:185,r:62},{x:-90,z:165,r:60},{x:95,z:170,r:60},{x:175,z:120,r:55},{x:190,z:-20,r:48},{x:-190,z:-10,r:48},{x:-175,z:110,r:50},{x:0,z:-165,r:60},{x:-110,z:-150,r:50},{x:110,z:-150,r:50},{x:-10,z:-10,r:16}];
 
-/* ---------- THREE ---------- */
-const renderer=new THREE.WebGLRenderer({canvas:$("c"),antialias:true});
-renderer.setPixelRatio(Math.min(2,devicePixelRatio));renderer.shadowMap.enabled=true;
-const scene=new THREE.Scene();scene.background=new THREE.Color(0x9fd6ec);scene.fog=new THREE.Fog(0x9fd6ec,220,520);
-const camera=new THREE.PerspectiveCamera(55,1,1,1200);
-scene.add(new THREE.HemisphereLight(0xdff3ff,0x2a5a3a,.9));
-const sun=new THREE.DirectionalLight(0xfff2d0,1.1);sun.position.set(120,200,80);sun.castShadow=true;
-sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-260,right:260,top:260,bottom:-260,near:10,far:600});scene.add(sun);
-// water
-const WG=new THREE.PlaneGeometry(1100,1100,70,70);WG.rotateX(-Math.PI/2);
-const water=new THREE.Mesh(WG,new THREE.MeshPhongMaterial({color:0x1b9fb8,shininess:90,specular:0x88e0ff,flatShading:true}));water.receiveShadow=true;scene.add(water);
-const wpos=WG.attributes.position,wbase=wpos.array.slice();
-// land
-const mat=(c)=>new THREE.MeshLambertMaterial({color:c});
-const grp=new THREE.Group();scene.add(grp);
-function block(x,y,z,w,h,d,c,ry){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));m.position.set(x,y,z);if(ry)m.rotation.y=ry;m.castShadow=m.receiveShadow=true;grp.add(m);return m}
-function palm(x,z){const t=new THREE.Mesh(new THREE.CylinderGeometry(.5,.9,9,5),mat(0x8a5a2b));t.position.set(x,4.5,z);t.castShadow=true;grp.add(t);
-  for(let i=0;i<5;i++){const l=new THREE.Mesh(new THREE.ConeGeometry(1.2,7,4),mat(0x2f9d4a));l.position.set(x+Math.cos(i*1.26)*2.4,9,z+Math.sin(i*1.26)*2.4);l.rotation.z=Math.cos(i*1.26)*1.2;l.rotation.x=-Math.sin(i*1.26)*1.2;l.castShadow=true;grp.add(l)}}
-LAND.forEach((L,i)=>{const g=new THREE.Mesh(new THREE.CylinderGeometry(L.r,L.r*1.15,6,18),mat(i===10?0xd9c48f:0x6fb35a));g.position.set(L.x,-1,L.z);g.receiveShadow=true;grp.add(g);
-  const beach=new THREE.Mesh(new THREE.CylinderGeometry(L.r*1.12,L.r*1.2,1.2,18),mat(0xe8d6a2));beach.position.set(L.x,-.6,L.z);grp.add(beach);
-  if(i===10)return;
-  for(let k=0;k<7;k++){const a=Math.random()*6.28,d=Math.random()*L.r*.7;palm(L.x+Math.cos(a)*d,L.z+Math.sin(a)*d)}
-  const cols=[0xf3e2c8,0xf7c5a8,0xcfe3f5,0xf9e8a0,0xe6b8d0];
-  for(let k=0;k<6;k++){const a=Math.random()*6.28,d=Math.random()*L.r*.55,h=6+Math.random()*16;block(L.x+Math.cos(a)*d,2+h/2,L.z+Math.sin(a)*d,8+Math.random()*10,h,8+Math.random()*10,rnd(cols),Math.random())}});
-// hotel + dock
-block(0,16,165,46,30,22,0xfaf3e6);block(0,32,165,26,4,20,0xd55a3a);
-block(0,1.6,DOCK.z,26,.8,4,0x8a6a3e);block(0,1.6,DOCK.z-14,4,.8,30,0x8a6a3e);
-for(let i=-12;i<=12;i+=6)[DOCK.z+2,DOCK.z-2].forEach(z=>block(i,.4,z,1,3,1,0x5a4225));
-// stops: markers
-const stopMeshes=STOPS.map(s=>{const g=new THREE.Group();g.position.set(s.x,0,s.z);
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(10,.9,8,40),new THREE.MeshBasicMaterial({color:0xf5c330}));ring.rotation.x=Math.PI/2;ring.position.y=.6;g.add(ring);
-  const beam=new THREE.Mesh(new THREE.CylinderGeometry(9,9,60,24,1,true),new THREE.MeshBasicMaterial({color:0xf5c330,transparent:true,opacity:.22,side:THREE.DoubleSide,depthWrite:false}));beam.position.y=30;g.add(beam);
-  const buoy=new THREE.Mesh(new THREE.SphereGeometry(1.4,10,8),mat(0xff5a4e));buoy.position.y=1.2;g.add(buoy);scene.add(g);g.userData={ring,beam};return g});
-const dockMarker=new THREE.Mesh(new THREE.TorusGeometry(12,.9,8,40),new THREE.MeshBasicMaterial({color:0x43d17a}));dockMarker.rotation.x=Math.PI/2;dockMarker.position.set(0,.6,DOCK.z-28);dockMarker.visible=false;scene.add(dockMarker);
-// boats
-function makeBoat(color){const g=new THREE.Group();
-  const hull=new THREE.Mesh(new THREE.BoxGeometry(4.2,1.6,10),mat(color));hull.position.y=.9;hull.castShadow=true;g.add(hull);
-  const bow=new THREE.Mesh(new THREE.ConeGeometry(2.1,4,4),mat(color));bow.rotation.x=-Math.PI/2;bow.rotation.z=Math.PI/4;bow.position.set(0,.9,-7);bow.scale.y=1;g.add(bow);
-  const deck=new THREE.Mesh(new THREE.BoxGeometry(3.6,.3,8),mat(0xf1e6cf));deck.position.set(0,1.8,-.4);g.add(deck);
-  const cons=new THREE.Mesh(new THREE.BoxGeometry(2,1.6,1.6),mat(0xffffff));cons.position.set(0,2.7,-1);g.add(cons);
-  const glass=new THREE.Mesh(new THREE.BoxGeometry(2.2,1,.3),new THREE.MeshPhongMaterial({color:0x2cc0d6,transparent:true,opacity:.6}));glass.position.set(0,3.4,-2);glass.rotation.x=-.4;g.add(glass);
-  const bimini=new THREE.Mesh(new THREE.BoxGeometry(3.6,.2,4),mat(0x1B3A5C));bimini.position.set(0,4.4,1.5);g.add(bimini);
-  const eng=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.6,1),mat(0x222));eng.position.set(0,1.4,5.4);g.add(eng);
-  const people=new THREE.Group();g.add(people);g.userData.people=people;scene.add(g);return g}
-const BOAT_DEFS=[{name:"Rum Bum",color:0xe8452f,home:{x:-8,z:DOCK.z-18}},{name:"Mistress",color:0xf6f1e4,home:{x:8,z:DOCK.z-18}}];
-
-/* ---------- STATE ---------- */
-let S;
-function newGame(){
-  S={t:0,cash:0,fines:0,boarded:0,lost:0,guests:[],nextArr:2,sel:null,step:0,bad:-1,busy:false,scan:false,manualDone:0,manualTimes:[],scanTimes:[],startAt:0,over:false,role:"manager",ctl:null,
-    boats:BOAT_DEFS.map((d,i)=>{const b={...d,i,list:[],state:"dock",x:d.home.x,z:d.home.z,h:0,v:0,stop:0,tripStart:0,driver:null,mesh:makeBoat(d.color)};b.mesh.position.set(b.x,0,b.z);b.mesh.rotation.y=b.h;return b}),
-    boardSel:0,keys:{},qkey:null};
-  stopMeshes.forEach(m=>m.visible=true);
-}
-function toast(m){const t=$("toast");t.textContent=m;t.classList.add("on");clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove("on"),2400)}
-function mission(big,sub,ms){$("mBig").textContent=big;$("mSub").textContent=sub||"";$("mBig").classList.add("on");$("mSub").classList.add("on");clearTimeout(mission._x);mission._x=setTimeout(()=>{$("mBig").classList.remove("on");$("mSub").classList.remove("on")},ms||2600)}
-function clock(){const m=7*60+30+Math.floor(S.t*1.5);return pad(Math.floor(m/60)%24)+":"+pad(m%60)}
-function mkGuest(dupOf){const src=dupOf;const g={id:Math.random().toString(36).slice(2),first:src?src.first:rnd(FIRST),last:src?src.last:rnd(LAST),nat:src?src.nat:rnd(NAT),
-  dob:src?src.dob:`${1960+Math.floor(Math.random()*40)}-${pad(1+Math.floor(Math.random()*12))}-${pad(1+Math.floor(Math.random()*28))}`,
-  pno:src?src.pno:rnd("ABCDEFGHJKLMNP")+String(100000+Math.floor(Math.random()*900000)),at:S.t,dup:!!src,done:false};S.guests.push(g);return g}
-
-/* ---------- DESK UI ---------- */
-function dockedBoats(){return S.boats.filter(b=>b.state==="dock")}
-function curBoat(){const b=S.boats[S.boardSel];return b&&b.state==="dock"?b:dockedBoats()[0]||null}
-function renderQueue(){const q=S.guests.filter(g=>!g.done);
-  const key=q.map(g=>g.id+":"+Math.floor((S.t-g.at)/5)+(S.sel===g?"*":"")).join(",");if(key===S.qkey)return;S.qkey=key;
-  $("qcount").textContent=q.length+" waiting";
-  $("queue").innerHTML=q.length?q.map(g=>{const p=Math.max(0,1-(S.t-g.at)/PATIENCE);return `<button class="guest ${S.sel===g?"sel":""}" data-id="${g.id}"><span class="av">${g.first[0]}${g.last[0]}</span><span>${g.first} ${g.last[0]}.</span><span class="pat"><i style="width:${p*100}%;background:${p<.3?"var(--bad)":p<.6?"var(--warn)":"var(--ok)"}"></i></span></button>`}).join(""):`<div class="empty">Nobody waiting.</div>`}
-function garble(s){const i=Math.floor(Math.random()*Math.max(1,s.length-1));return s.slice(0,i)+(s[i]==="0"?"O":"X")+s.slice(i+1)}
-function renderDesk(){const g=S.sel,b=curBoat();
-  $("boatsel").innerHTML=S.boats.map(x=>`<button data-i="${x.i}" class="${x===b?"on":""}" ${x.state!=="dock"?"disabled":""}>${x.name} · ${x.state==="dock"?x.list.length+" on list":x.state==="trip"?"on tour":"returning"}</button>`).join("");
-  const vals=g?[g.last.toUpperCase(),g.first.toUpperCase(),g.dob,g.pno,g.nat,b?b.name:"—"]:["","","","","",""];
-  for(let i=0;i<6;i++){const f=$("f"+i);const show=g&&(S.scan?S.step>=FIELDS:i<S.step||(i===5&&S.step>0));f.querySelector(".v").textContent=show?(S.bad===i?garble(vals[i]):vals[i]):"";f.className="field"+(show?(S.bad===i?" bad":" ok"):"")}
-  const done=g&&S.step>=FIELDS,dupShown=S.scan&&g&&g.dup&&done;
-  $("typeBtn").hidden=S.scan;$("fixBtn").hidden=S.scan;$("scanBtn").hidden=!S.scan;
-  $("typeBtn").disabled=!g||!b||S.busy||done||S.bad>=0;$("fixBtn").disabled=!g||S.busy||S.bad<0;$("scanBtn").disabled=!g||!b||S.busy||done;
-  $("skipBtn").hidden=!dupShown;$("skipBtn").disabled=!dupShown;$("addBtn").disabled=!g||!b||S.busy||!done||dupShown;
-  $("goMe").disabled=$("goAlex").disabled=!b||!b.list.length||S.busy;
-  $("deskMode").textContent=S.scan?"ScanPass · on-device":"manual entry";
-  $("hint").textContent=!b?"No boat at the dock. Guests are waiting…":!g?"Next guest steps up automatically.":S.scan?(done?(dupShown?"Duplicate caught before it reached the list.":"All fields read. Add to list."):"Point the camera at the data page."):S.bad>=0?"That field came out wrong. Fix it, or the coast guard will.":done?"All typed. Add to list — did you check the fields?":`Field ${S.step+1} of ${FIELDS}.`}
-function renderHUD(){$("cash").textContent="$"+S.cash;$("boarded").textContent=S.boarded;$("fines").textContent="$"+S.fines;$("clock").textContent=clock()}
-function select(g){if(S.busy)return;S.sel=g;S.step=0;S.bad=-1;S.startAt=S.t;renderDesk();renderQueue()}
-function autoSelect(){if(S.sel||S.busy)return;const g=S.guests.find(g=>!g.done);if(g)select(g)}
-$("queue").addEventListener("click",e=>{const b=e.target.closest(".guest");if(!b)return;select(S.guests.find(g=>g.id===b.dataset.id))});
-$("boatsel").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;S.boardSel=+b.dataset.i;renderDesk()});
-$("typeBtn").onclick=()=>{if(!S.sel||S.busy)return;S.busy=true;renderDesk();setTimeout(()=>{S.busy=false;if(Math.random()<0.28)S.bad=S.step;S.step++;renderDesk()},MANUAL_STEP)};
-$("fixBtn").onclick=()=>{if(S.bad<0||S.busy)return;S.busy=true;renderDesk();setTimeout(()=>{S.busy=false;S.bad=-1;renderDesk()},MANUAL_STEP)};
-$("scanBtn").onclick=()=>{if(!S.sel||S.busy)return;S.busy=true;renderDesk();$("hint").textContent="Reading MRZ…";setTimeout(()=>{S.busy=false;S.step=FIELDS;S.bad=-1;renderDesk()},SCAN_STEP)};
-$("skipBtn").onclick=()=>{S.sel.done=true;toast("Duplicate skipped");S.sel=null;autoSelect();renderDesk();renderQueue()};
-$("addBtn").onclick=()=>{const g=S.sel,b=curBoat();if(!g||!b)return;const err=S.bad>=0||(g.dup&&!S.scan);b.list.push({g,err});g.done=true;const took=S.t-S.startAt;
-  if(S.scan)S.scanTimes.push(took);else{S.manualTimes.push(took);S.manualDone++}
-  addPerson(b);S.sel=null;S.step=0;S.bad=-1;autoSelect();
-  if(!S.scan&&S.manualDone>=3&&!S.unlockShown){S.unlockShown=true;$("unlock").classList.add("show");mission("Incoming call","Captain Alex has a tip",2200)}
-  renderDesk();renderQueue()};
-$("installBtn").onclick=()=>{S.scan=true;$("unlock").classList.remove("show");mission("ScanPass installed","One tap per passport. No cloud, no fees.");S.step=0;S.bad=-1;renderDesk()};
-function addPerson(b){const n=b.list.length,p=new THREE.Group();const body=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,1.4,6),mat(rnd([0xff8a5b,0x5bc0ff,0xffe15b,0xb28bff,0x7bffb0])));body.position.y=.7;p.add(body);
-  const head=new THREE.Mesh(new THREE.SphereGeometry(.42,8,6),mat(0xe8b990));head.position.y=1.7;p.add(head);p.position.set(((n-1)%2?1.1:-1.1),2,1.2+Math.floor((n-1)/2)*1.3-1.5);b.mesh.userData.people.add(p)}
-function castOff(me){const b=curBoat();if(!b||!b.list.length)return;b.state="trip";b.stop=0;b.tripStart=S.t;b.driver=me?"you":"alex";b.v=0;
-  if(S.sel){S.sel=null;S.step=0;S.bad=-1}
-  if(me){setRole("captain",b)}else{toast(`${b.name} leaves with Captain Alex`)}
-  renderDesk()}
-$("goMe").onclick=()=>castOff(true);$("goAlex").onclick=()=>castOff(false);
-
-/* ---------- ROLES ---------- */
-function setRole(r,boat){if(r==="captain"){const b=boat||S.boats.find(x=>x.state!=="dock");if(!b)return;S.role="captain";S.ctl=b;b.driver="you";
-    $("desk").hidden=true;$("helm").hidden=false;$("hBoat").textContent=b.name+" · "+b.list.length+" guests";mission("You have the helm",`${b.name}: hit all 5 stops, then back to the dock`);}
-  else{S.role="manager";if(S.ctl){S.ctl.driver="alex";S.ctl=null}$("desk").hidden=false;$("helm").hidden=true;mission("Back at the desk","Alex takes the wheel",1800)}
-  $("roleM").classList.toggle("on",S.role==="manager");$("roleC").classList.toggle("on",S.role==="captain")}
-$("roleM").onclick=()=>{if(S.role!=="manager")setRole("manager")};
-$("roleC").onclick=()=>{if(S.role!=="captain")setRole("captain")};
-$("handover").onclick=()=>setRole("manager");
-
-/* ---------- INPUT ---------- */
-addEventListener("keydown",e=>{if(e.key==="Tab"){e.preventDefault();if(S.role==="captain")setRole("manager");else if(S.boats.some(b=>b.state!=="dock"))setRole("captain");return}S.keys[e.key.toLowerCase()]=true});
-addEventListener("keyup",e=>S.keys[e.key.toLowerCase()]=false);
-[["pL","a"],["pR","d"],["pF","w"],["pB","s"]].forEach(([id,k])=>{const el=$(id);const on=e=>{e.preventDefault();S.keys[k]=true;el.classList.add("down")},off=e=>{S.keys[k]=false;el.classList.remove("down")};el.addEventListener("pointerdown",on);el.addEventListener("pointerup",off);el.addEventListener("pointercancel",off);el.addEventListener("pointerleave",off)});
-function input(){const k=S.keys;return{thr:(k.w||k.arrowup?1:0)-(k.s||k.arrowdown?.6:0),steer:(k.a||k.arrowleft?1:0)-(k.d||k.arrowright?1:0)}}
-
-/* ---------- SIM ---------- */
-function target(b){if(b.stop<STOPS.length)return STOPS[b.stop];return{x:0,z:DOCK.z-28,n:"Dock"}}
-function stepBoat(b,dt){if(b.state==="dock")return;
-  let thr=0,steer=0;
-  if(b.driver==="you"){const i=input();thr=i.thr;steer=i.steer}
-  else{const t=target(b),dx=t.x-b.x,dz=t.z-b.z,want=Math.atan2(-dx,-dz);let d=want-b.h;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;steer=Math.max(-1,Math.min(1,d*2));thr=Math.abs(d)<1?.8:.4}
-  b.v+=thr*22*dt;b.v-=b.v*0.55*dt;b.v=Math.max(-8,Math.min(28,b.v));
-  b.h+=steer*1.6*dt*Math.min(1,Math.abs(b.v)/8)*(b.v<0?-1:1);
-  b.x+=-Math.sin(b.h)*b.v*dt;b.z+=-Math.cos(b.h)*b.v*dt;
-  LAND.forEach(L=>{const dx=b.x-L.x,dz=b.z-L.z,d=Math.hypot(dx,dz),min=L.r*1.15+4;if(d<min){b.x=L.x+dx/d*min;b.z=L.z+dz/d*min;if(Math.abs(b.v)>6&&b.driver==="you")toast("Easy on the rocks!");b.v*=.3}});
-  const lim=330;if(Math.hypot(b.x,b.z)>lim){const a=Math.atan2(b.z,b.x);b.x=Math.cos(a)*lim;b.z=Math.sin(a)*lim;b.v*=.3}
-  b.mesh.position.set(b.x,.2+Math.sin(S.t*3+b.i)*.15,b.z);b.mesh.rotation.y=b.h;b.mesh.rotation.z=-steer*.12*Math.min(1,Math.abs(b.v)/10);b.mesh.rotation.x=-Math.min(.12,b.v*.006);
-  const t=target(b);if(Math.hypot(t.x-b.x,t.z-b.z)<11){
-    if(b.stop<STOPS.length){if(b.stop===0){const errs=b.list.filter(x=>x.err).length;if(errs){const f=errs*FINE;S.fines+=f;S.cash-=f;mission("Coast guard check",`${errs} error(s) on ${b.name}'s list · fine $${f}`,3000)}}
-      b.stop++;if(b.driver==="you")mission(b.stop<STOPS.length?`Stop ${b.stop} · ${t.n}`:"Last stop done",b.stop<STOPS.length?`Next: ${STOPS[b.stop].n}`:"Bring her home to the green marker",1800)}
-    else{arrive(b)}}}
-function arrive(b){const n=b.list.filter(x=>!x.g.dup).length,dur=S.t-b.tripStart;let rev=n*PRICE,tip=0;if(b.driver==="you"&&dur<110)tip=n*TIP;S.cash+=rev+tip;S.boarded+=n;
-  b.state="dock";b.list=[];b.stop=0;b.x=b.home.x;b.z=b.home.z;b.h=0;b.v=0;b.mesh.position.set(b.x,0,b.z);b.mesh.rotation.set(0,b.h,0);b.mesh.userData.people.clear();
-  if(S.ctl===b){setRole("manager")}
-  mission(`${b.name} back · +$${rev+tip}`,tip?`Guests loved the ride · $${tip} tips`:b.driver==="you"?"Slow trip, no tips":"Alex drove",3000);
-  renderDesk()}
-function tick(dt){if(S.over)return;S.t+=dt;
-  if(S.t>=S.nextArr&&S.guests.filter(g=>!g.done).length<9){const q=S.guests.filter(g=>!g.done);const dup=q.length>2&&Math.random()<.15?rnd(S.guests.filter(g=>g.done&&!g.dup)):null;mkGuest(dup);S.nextArr=S.t+6+Math.random()*7}
-  S.guests.forEach(g=>{if(!g.done&&S.t-g.at>PATIENCE){g.done=true;if(!g.dup){S.lost++;if(S.sel===g){S.sel=null;S.step=0;S.bad=-1}toast(`${g.first} ${g.last} walked away`)}}});
-  S.boats.forEach(b=>stepBoat(b,dt));
-  if(S.role==="manager")autoSelect();
-  $("roleC").disabled=!S.boats.some(b=>b.state!=="dock");
-  if(S.t>=DAY)endGame();
+  /* ---------- THREE ---------- */
+  const renderer=new THREE.WebGLRenderer({canvas:$("c"),antialias:true});
+  renderer.setPixelRatio(Math.min(2,devicePixelRatio));
+  renderer.shadowMap.enabled=true;
+  const scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x9fd6ec);
+  scene.fog=new THREE.Fog(0x9fd6ec,220,520);
+  const camera=new THREE.PerspectiveCamera(55,1,1,1200);
+  scene.add(new THREE.HemisphereLight(0xdff3ff,0x2a5a3a,.9));
+  const sun=new THREE.DirectionalLight(0xfff2d0,1.1);
+  sun.position.set(120,200,80);
+  sun.castShadow=true;
+  sun.shadow.mapSize.set(2048,2048);
+  Object.assign(sun.shadow.camera,{left:-260,right:260,top:260,bottom:-260,near:10,far:600});
+  scene.add(sun);
   // water
-  for(let i=0;i<wpos.count;i++){const x=wbase[i*3],z=wbase[i*3+2];wpos.array[i*3+1]=Math.sin(x*.05+S.t*1.3)*.5+Math.cos(z*.07+S.t*1.1)*.5}
-  wpos.needsUpdate=true;WG.computeVertexNormals();
-  stopMeshes.forEach((m,i)=>{const act=S.boats.some(b=>b.state==="trip"&&b.stop===i);m.userData.ring.scale.setScalar(act?1+Math.sin(S.t*4)*.08:1);m.userData.beam.material.opacity=act?.3:.08;m.userData.ring.material.color.set(act?0xf5c330:0xffffff)});
-  dockMarker.visible=S.boats.some(b=>b.state==="trip"&&b.stop>=STOPS.length);
-  renderHUD();if(S.role==="manager"){renderQueue();if(Math.floor(S.t*4)!==Math.floor((S.t-dt)*4))renderDeskLight()}
-  drawMap()}
-function renderDeskLight(){const b=curBoat();$("goMe").disabled=$("goAlex").disabled=!b||!b.list.length||S.busy;if(S.role==="captain"){const i=input();$("hSpeed").textContent=Math.round(Math.abs(S.ctl.v)*1.2)+" kn"}}
-/* camera */
-const camPos=new THREE.Vector3(0,95,DOCK.z+90),camLook=new THREE.Vector3(0,0,DOCK.z-40);
-function updateCam(dt){let tp,tl;if(S.role==="captain"&&S.ctl){const b=S.ctl;tp=new THREE.Vector3(b.x+Math.sin(b.h)*28,22,b.z+Math.cos(b.h)*28);tl=new THREE.Vector3(b.x-Math.sin(b.h)*14,2,b.z-Math.cos(b.h)*14)}
-  else{tp=new THREE.Vector3(0,80,DOCK.z+70);tl=new THREE.Vector3(0,0,DOCK.z-50)}
-  const k=Math.min(1,dt*3);camPos.lerp(tp,k);camLook.lerp(tl,k);camera.position.copy(camPos);camera.lookAt(camLook)}
-/* minimap */
-const mc=$("map").getContext("2d");
-function drawMap(){const W=300,H=220,sx=x=>W/2+x*.4,sz=z=>H/2+z*.4;mc.fillStyle="#0b2a3a";mc.fillRect(0,0,W,H);
-  LAND.forEach(L=>{mc.fillStyle="#4d8f45";mc.beginPath();mc.arc(sx(L.x),sz(L.z),L.r*.4,0,7);mc.fill()});
-  STOPS.forEach((s,i)=>{mc.fillStyle=S.boats.some(b=>b.state==="trip"&&b.stop===i)?"#f5c330":"#ffffff";mc.beginPath();mc.arc(sx(s.x),sz(s.z),4,0,7);mc.fill()});
-  mc.fillStyle="#43d17a";mc.fillRect(sx(-8),sz(DOCK.z)-2,16,4);
-  S.boats.forEach(b=>{mc.save();mc.translate(sx(b.x),sz(b.z));mc.rotate(-b.h);mc.fillStyle=b===S.ctl?"#f5c330":"#ff5a4e";mc.beginPath();mc.moveTo(0,-7);mc.lineTo(5,6);mc.lineTo(-5,6);mc.closePath();mc.fill();mc.restore()});
-  if(S.role==="captain"&&S.ctl){const t=target(S.ctl);$("hNext").textContent="Next: "+t.n+" · "+Math.round(Math.hypot(t.x-S.ctl.x,t.z-S.ctl.z)/10)+"00 m";$("hSpeed").textContent=Math.round(Math.abs(S.ctl.v)*1.2)+" kn"}}
+  const WG=new THREE.PlaneGeometry(1100,1100,70,70);
+  WG.rotateX(-Math.PI/2);
+  const water=new THREE.Mesh(WG,new THREE.MeshPhongMaterial({color:0x1b9fb8,shininess:90,specular:0x88e0ff,flatShading:true}));
+  water.receiveShadow=true;
+  scene.add(water);
+  const wpos=WG.attributes.position,wbase=wpos.array.slice();
+  // land
+  const mat=(c)=>new THREE.MeshLambertMaterial({color:c});
+  const grp=new THREE.Group();
+  scene.add(grp);
+  function block(x,y,z,w,h,d,c,ry){
+    const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));
+    m.position.set(x,y,z);
+    if(ry)m.rotation.y=ry;
+    m.castShadow=m.receiveShadow=true;
+    grp.add(m);
+    return m
+  }
+  function palm(x,z){
+    const t=new THREE.Mesh(new THREE.CylinderGeometry(.5,.9,9,5),mat(0x8a5a2b));
+    t.position.set(x,4.5,z);
+    t.castShadow=true;
+    grp.add(t);
+    for(let i=0;i<5;i++){
+      const l=new THREE.Mesh(new THREE.ConeGeometry(1.2,7,4),mat(0x2f9d4a));
+      l.position.set(x+Math.cos(i*1.26)*2.4,9,z+Math.sin(i*1.26)*2.4);
+      l.rotation.z=Math.cos(i*1.26)*1.2;
+      l.rotation.x=-Math.sin(i*1.26)*1.2;
+      l.castShadow=true;
+      grp.add(l)
+    }
+  }
+  LAND.forEach((L,i)=>{
+    const g=new THREE.Mesh(new THREE.CylinderGeometry(L.r,L.r*1.15,6,18),mat(i===10?0xd9c48f:0x6fb35a));
+    g.position.set(L.x,-1,L.z);
+    g.receiveShadow=true;
+    grp.add(g);
+    const beach=new THREE.Mesh(new THREE.CylinderGeometry(L.r*1.12,L.r*1.2,1.2,18),mat(0xe8d6a2));
+    beach.position.set(L.x,-.6,L.z);
+    grp.add(beach);
+    if(i===10)return;
+    for(let k=0;k<7;k++){
+      const a=Math.random()*6.28,d=Math.random()*L.r*.7;
+      palm(L.x+Math.cos(a)*d,L.z+Math.sin(a)*d)
+    }
+    const cols=[0xf3e2c8,0xf7c5a8,0xcfe3f5,0xf9e8a0,0xe6b8d0];
+    for(let k=0;k<6;k++){
+      const a=Math.random()*6.28,d=Math.random()*L.r*.55,h=6+Math.random()*16;
+      block(L.x+Math.cos(a)*d,2+h/2,L.z+Math.sin(a)*d,8+Math.random()*10,h,8+Math.random()*10,rnd(cols),Math.random())
+    }
+  });
+  // hotel + dock
+  block(0,16,165,46,30,22,0xfaf3e6);
+  block(0,32,165,26,4,20,0xd55a3a);
+  block(0,1.6,DOCK.z,26,.8,4,0x8a6a3e);
+  block(0,1.6,DOCK.z-14,4,.8,30,0x8a6a3e);
+  for(let i=-12;i<=12;i+=6)[DOCK.z+2,DOCK.z-2].forEach(z=>block(i,.4,z,1,3,1,0x5a4225));
+  // stops: markers
+  const stopMeshes=STOPS.map(s=>{
+    const g=new THREE.Group();
+    g.position.set(s.x,0,s.z);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(10,.9,8,40),new THREE.MeshBasicMaterial({color:0xf5c330}));
+    ring.rotation.x=Math.PI/2;
+    ring.position.y=.6;
+    g.add(ring);
+    const beam=new THREE.Mesh(new THREE.CylinderGeometry(9,9,60,24,1,true),new THREE.MeshBasicMaterial({color:0xf5c330,transparent:true,opacity:.22,side:THREE.DoubleSide,depthWrite:false}));
+    beam.position.y=30;
+    g.add(beam);
+    const buoy=new THREE.Mesh(new THREE.SphereGeometry(1.4,10,8),mat(0xff5a4e));
+    buoy.position.y=1.2;
+    g.add(buoy);
+    scene.add(g);
+    g.userData={ring,beam};
+    return g
+  });
+  const dockMarker=new THREE.Mesh(new THREE.TorusGeometry(12,.9,8,40),new THREE.MeshBasicMaterial({color:0x43d17a}));
+  dockMarker.rotation.x=Math.PI/2;
+  dockMarker.position.set(0,.6,DOCK.z-28);
+  dockMarker.visible=false;
+  scene.add(dockMarker);
+  // boats
+  function makeBoat(color){
+    const g=new THREE.Group();
+    const hull=new THREE.Mesh(new THREE.BoxGeometry(4.2,1.6,10),mat(color));
+    hull.position.y=.9;
+    hull.castShadow=true;
+    g.add(hull);
+    const bow=new THREE.Mesh(new THREE.ConeGeometry(2.1,4,4),mat(color));
+    bow.rotation.x=-Math.PI/2;
+    bow.rotation.z=Math.PI/4;
+    bow.position.set(0,.9,-7);
+    bow.scale.y=1;
+    g.add(bow);
+    const deck=new THREE.Mesh(new THREE.BoxGeometry(3.6,.3,8),mat(0xf1e6cf));
+    deck.position.set(0,1.8,-.4);
+    g.add(deck);
+    const cons=new THREE.Mesh(new THREE.BoxGeometry(2,1.6,1.6),mat(0xffffff));
+    cons.position.set(0,2.7,-1);
+    g.add(cons);
+    const glass=new THREE.Mesh(new THREE.BoxGeometry(2.2,1,.3),new THREE.MeshPhongMaterial({color:0x2cc0d6,transparent:true,opacity:.6}));
+    glass.position.set(0,3.4,-2);
+    glass.rotation.x=-.4;
+    g.add(glass);
+    const bimini=new THREE.Mesh(new THREE.BoxGeometry(3.6,.2,4),mat(0x1B3A5C));
+    bimini.position.set(0,4.4,1.5);
+    g.add(bimini);
+    const eng=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.6,1),mat(0x222));
+    eng.position.set(0,1.4,5.4);
+    g.add(eng);
+    const people=new THREE.Group();
+    g.add(people);
+    g.userData.people=people;
+    scene.add(g);
+    return g
+  }
+  const BOAT_DEFS=[{name:"Rum Bum",color:0xe8452f,home:{x:-8,z:DOCK.z-18}},{name:"Mistress",color:0xf6f1e4,home:{x:8,z:DOCK.z-18}}];
 
-function endGame(){S.over=true;const avg=a=>a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(1)+"s":"—";
-  $("rCash").textContent="$"+S.cash;$("rBoarded").textContent=S.boarded;$("rLost").textContent=S.lost;$("rFines").textContent="$"+S.fines;$("rManual").textContent=avg(S.manualTimes);$("rScan").textContent=avg(S.scanTimes);
-  $("endTitle").textContent=S.fines===0&&S.lost<=2?"Clean lists, full boats.":S.fines?"The coast guard sends regards.":"Guests walked. Dock was slow.";
-  const m=S.manualTimes.length?S.manualTimes.reduce((a,b)=>a+b,0)/S.manualTimes.length:0,s=S.scanTimes.length?S.scanTimes.reduce((a,b)=>a+b,0)/S.scanTimes.length:0;
-  $("endNote").textContent=s&&m?`Manual entry took about ${Math.max(2,Math.round(m/s))}× longer per guest than scanning. Every typo on a list costs $${FINE} at clearance, and every slow check-in is a guest walking away.`:`You never installed ScanPass. Next time, listen to the captain.`;
-  $("end").hidden=false}
+  /* ---------- STATE ---------- */
+  let S;
+  function newGame(){
+    S={t:0,cash:0,fines:0,boarded:0,lost:0,guests:[],nextArr:2,sel:null,step:0,bad:-1,busy:false,scan:false,manualDone:0,manualTimes:[],scanTimes:[],startAt:0,over:false,role:"manager",ctl:null,
+      boats:BOAT_DEFS.map((d,i)=>{
+        const b={...d,i,list:[],state:"dock",x:d.home.x,z:d.home.z,h:0,v:0,stop:0,tripStart:0,driver:null,mesh:makeBoat(d.color)};
+        b.mesh.position.set(b.x,0,b.z);
+        b.mesh.rotation.y=b.h;
+        return b
+      }),
+      boardSel:0,keys:{},qkey:null};
+    stopMeshes.forEach(m=>m.visible=true);
+  }
+  function toast(m){
+    const t=$("toast");
+    t.textContent=m;
+    t.classList.add("on");
+    clearTimeout(t._x);
+    t._x=setTimeout(()=>t.classList.remove("on"),2400)
+  }
+  function mission(big,sub,ms){
+    $("mBig").textContent=big;
+    $("mSub").textContent=sub||"";
+    $("mBig").classList.add("on");
+    $("mSub").classList.add("on");
+    clearTimeout(mission._x);
+    mission._x=setTimeout(()=>{
+      $("mBig").classList.remove("on");
+      $("mSub").classList.remove("on")
+    },ms||2600)
+  }
+  function clock(){
+    const m=7*60+30+Math.floor(S.t*1.5);
+    return pad(Math.floor(m/60)%24)+":"+pad(m%60)
+  }
+  function mkGuest(dupOf){
+    const src=dupOf;
+    const g={id:Math.random().toString(36).slice(2),first:src?src.first:rnd(FIRST),last:src?src.last:rnd(LAST),nat:src?src.nat:rnd(NAT),
+      dob:src?src.dob:`${1960+Math.floor(Math.random()*40)}-${pad(1+Math.floor(Math.random()*12))}-${pad(1+Math.floor(Math.random()*28))}`,
+      pno:src?src.pno:rnd("ABCDEFGHJKLMNP")+String(100000+Math.floor(Math.random()*900000)),at:S.t,dup:!!src,done:false};
+    S.guests.push(g);
+    return g
+  }
 
-/* ---------- LOOP ---------- */
-function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
-addEventListener("resize",resize);resize();
-let last=performance.now(),running=false;
-function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(running&&!S.over)tick(dt);updateCam(dt);renderer.render(scene,camera);requestAnimationFrame(frame)}
-function start(){if(S)S.boats.forEach(b=>scene.remove(b.mesh));newGame();$("intro").hidden=true;$("end").hidden=true;$("unlock").classList.remove("show");setRole("manager");running=true;renderDesk();renderQueue();mission("Charter Rush","Simpson Bay · 07:30 · dock opens",2600)}
-$("startBtn").onclick=start;$("againBtn").onclick=start;
-newGame();renderDesk();renderQueue();drawMap();requestAnimationFrame(frame);
+  /* ---------- DESK UI ---------- */
+  function dockedBoats(){
+    return S.boats.filter(b=>b.state==="dock")
+  }
+  function curBoat(){
+    const b=S.boats[S.boardSel];
+    return b&&b.state==="dock"?b:dockedBoats()[0]||null
+  }
+  function renderQueue(){
+    const q=S.guests.filter(g=>!g.done);
+    const key=q.map(g=>g.id+":"+Math.floor((S.t-g.at)/5)+(S.sel===g?"*":"")).join(",");
+    if(key===S.qkey)return;
+    S.qkey=key;
+    $("qcount").textContent=q.length+" waiting";
+    $("queue").innerHTML=q.length?q.map(g=>{
+      const p=Math.max(0,1-(S.t-g.at)/PATIENCE);
+      return `<button class="guest ${S.sel===g?"sel":""}" data-id="${g.id}"><span class="av">${g.first[0]}${g.last[0]}</span><span>${g.first} ${g.last[0]}.</span><span class="pat"><i style="width:${p*100}%;background:${p<.3?"var(--bad)":p<.6?"var(--warn)":"var(--ok)"}"></i></span></button>`
+    }).join(""):`<div class="empty">Nobody waiting.</div>`
+  }
+  function garble(s){
+    const i=Math.floor(Math.random()*Math.max(1,s.length-1));
+    return s.slice(0,i)+(s[i]==="0"?"O":"X")+s.slice(i+1)
+  }
+  function renderDesk(){
+    const g=S.sel,b=curBoat();
+    $("boatsel").innerHTML=S.boats.map(x=>`<button data-i="${x.i}" class="${x===b?"on":""}" ${x.state!=="dock"?"disabled":""}>${x.name} · ${x.state==="dock"?x.list.length+" on list":x.state==="trip"?"on tour":"returning"}</button>`).join("");
+    const vals=g?[g.last.toUpperCase(),g.first.toUpperCase(),g.dob,g.pno,g.nat,b?b.name:"—"]:["","","","","",""];
+    for(let i=0;i<6;i++){
+      const f=$("f"+i);
+      const show=g&&(S.scan?S.step>=FIELDS:i<S.step||(i===5&&S.step>0));
+      f.querySelector(".v").textContent=show?(S.bad===i?garble(vals[i]):vals[i]):"";
+      f.className="field"+(show?(S.bad===i?" bad":" ok"):"")
+    }
+    const done=g&&S.step>=FIELDS,dupShown=S.scan&&g&&g.dup&&done;
+    $("typeBtn").hidden=S.scan;
+    $("fixBtn").hidden=S.scan;
+    $("scanBtn").hidden=!S.scan;
+    $("typeBtn").disabled=!g||!b||S.busy||done||S.bad>=0;
+    $("fixBtn").disabled=!g||S.busy||S.bad<0;
+    $("scanBtn").disabled=!g||!b||S.busy||done;
+    $("skipBtn").hidden=!dupShown;
+    $("skipBtn").disabled=!dupShown;
+    $("addBtn").disabled=!g||!b||S.busy||!done||dupShown;
+    $("goMe").disabled=$("goAlex").disabled=!b||!b.list.length||S.busy;
+    $("deskMode").textContent=S.scan?"ScanPass · on-device":"manual entry";
+    $("hint").textContent=!b?"No boat at the dock. Guests are waiting…":!g?"Next guest steps up automatically.":S.scan?(done?(dupShown?"Duplicate caught before it reached the list.":"All fields read. Add to list."):"Point the camera at the data page."):S.bad>=0?"That field came out wrong. Fix it, or the coast guard will.":done?"All typed. Add to list — did you check the fields?":`Field ${S.step+1} of ${FIELDS}.`
+  }
+  function renderHUD(){
+    $("cash").textContent="$"+S.cash;
+    $("boarded").textContent=S.boarded;
+    $("fines").textContent="$"+S.fines;
+    $("clock").textContent=clock()
+  }
+  function select(g){
+    if(S.busy)return;
+    S.sel=g;
+    S.step=0;
+    S.bad=-1;
+    S.startAt=S.t;
+    renderDesk();
+    renderQueue()
+  }
+  function autoSelect(){
+    if(S.sel||S.busy)return;
+    const g=S.guests.find(g=>!g.done);
+    if(g)select(g)
+  }
+  $("queue").addEventListener("click",e=>{
+    const b=e.target.closest(".guest");
+    if(!b)return;
+    select(S.guests.find(g=>g.id===b.dataset.id))
+  });
+  $("boatsel").addEventListener("click",e=>{
+    const b=e.target.closest("button");
+    if(!b||b.disabled)return;
+    S.boardSel=+b.dataset.i;
+    renderDesk()
+  });
+  $("typeBtn").onclick=()=>{
+    if(!S.sel||S.busy)return;
+    S.busy=true;
+    renderDesk();
+    setTimeout(()=>{
+      S.busy=false;
+      if(Math.random()<0.28)S.bad=S.step;
+      S.step++;
+      renderDesk()
+    },MANUAL_STEP)
+  };
+  $("fixBtn").onclick=()=>{
+    if(S.bad<0||S.busy)return;
+    S.busy=true;
+    renderDesk();
+    setTimeout(()=>{
+      S.busy=false;
+      S.bad=-1;
+      renderDesk()
+    },MANUAL_STEP)
+  };
+  $("scanBtn").onclick=()=>{
+    if(!S.sel||S.busy)return;
+    S.busy=true;
+    renderDesk();
+    $("hint").textContent="Reading MRZ…";
+    setTimeout(()=>{
+      S.busy=false;
+      S.step=FIELDS;
+      S.bad=-1;
+      renderDesk()
+    },SCAN_STEP)
+  };
+  $("skipBtn").onclick=()=>{
+    S.sel.done=true;
+    toast("Duplicate skipped");
+    S.sel=null;
+    autoSelect();
+    renderDesk();
+    renderQueue()
+  };
+  $("addBtn").onclick=()=>{
+    const g=S.sel,b=curBoat();
+    if(!g||!b)return;
+    const err=S.bad>=0||(g.dup&&!S.scan);
+    b.list.push({g,err});
+    g.done=true;
+    const took=S.t-S.startAt;
+    if(S.scan)S.scanTimes.push(took);else{
+      S.manualTimes.push(took);
+      S.manualDone++
+    }
+    addPerson(b);
+    S.sel=null;
+    S.step=0;
+    S.bad=-1;
+    autoSelect();
+    if(!S.scan&&S.manualDone>=3&&!S.unlockShown){
+      S.unlockShown=true;
+      $("unlock").classList.add("show");
+      mission("Incoming call","Captain Alex has a tip",2200)
+    }
+    renderDesk();
+    renderQueue()
+  };
+  $("installBtn").onclick=()=>{
+    S.scan=true;
+    $("unlock").classList.remove("show");
+    mission("ScanPass installed","One tap per passport. No cloud, no fees.");
+    S.step=0;
+    S.bad=-1;
+    renderDesk()
+  };
+  function addPerson(b){
+    const n=b.list.length,p=new THREE.Group();
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,1.4,6),mat(rnd([0xff8a5b,0x5bc0ff,0xffe15b,0xb28bff,0x7bffb0])));
+    body.position.y=.7;
+    p.add(body);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.42,8,6),mat(0xe8b990));
+    head.position.y=1.7;
+    p.add(head);
+    p.position.set(((n-1)%2?1.1:-1.1),2,1.2+Math.floor((n-1)/2)*1.3-1.5);
+    b.mesh.userData.people.add(p)
+  }
+  function castOff(me){
+    const b=curBoat();
+    if(!b||!b.list.length)return;
+    b.state="trip";
+    b.stop=0;
+    b.tripStart=S.t;
+    b.driver=me?"you":"alex";
+    b.v=0;
+    if(S.sel){
+      S.sel=null;
+      S.step=0;
+      S.bad=-1
+    }
+    if(me){
+      setRole("captain",b)
+    }else{
+      toast(`${b.name} leaves with Captain Alex`)
+    }
+    renderDesk()
+  }
+  $("goMe").onclick=()=>castOff(true);
+  $("goAlex").onclick=()=>castOff(false);
+
+  /* ---------- ROLES ---------- */
+  function setRole(r,boat){
+    if(r==="captain"){
+      const b=boat||S.boats.find(x=>x.state!=="dock");
+      if(!b)return;
+      S.role="captain";
+      S.ctl=b;
+      b.driver="you";
+      $("desk").hidden=true;
+      $("helm").hidden=false;
+      $("hBoat").textContent=b.name+" · "+b.list.length+" guests";
+      mission("You have the helm",`${b.name}: hit all 5 stops, then back to the dock`);
+    }
+    else{
+      S.role="manager";
+      if(S.ctl){
+        S.ctl.driver="alex";
+        S.ctl=null
+      }
+      $("desk").hidden=false;
+      $("helm").hidden=true;
+      mission("Back at the desk","Alex takes the wheel",1800)
+    }
+    $("roleM").classList.toggle("on",S.role==="manager");
+    $("roleC").classList.toggle("on",S.role==="captain")
+  }
+  $("roleM").onclick=()=>{
+    if(S.role!=="manager")setRole("manager")
+  };
+  $("roleC").onclick=()=>{
+    if(S.role!=="captain")setRole("captain")
+  };
+  $("handover").onclick=()=>setRole("manager");
+
+  /* ---------- INPUT ---------- */
+  addEventListener("keydown",e=>{
+    if(e.key==="Tab"){
+      e.preventDefault();
+      if(S.role==="captain")setRole("manager");else if(S.boats.some(b=>b.state!=="dock"))setRole("captain");
+      return
+    }
+    S.keys[e.key.toLowerCase()]=true
+  });
+  addEventListener("keyup",e=>S.keys[e.key.toLowerCase()]=false);
+  [["pL","a"],["pR","d"],["pF","w"],["pB","s"]].forEach(([id,k])=>{
+    const el=$(id);
+    const on=e=>{
+      e.preventDefault();
+      S.keys[k]=true;
+      el.classList.add("down")
+    },off=e=>{
+      S.keys[k]=false;
+      el.classList.remove("down")
+    };
+    el.addEventListener("pointerdown",on);
+    el.addEventListener("pointerup",off);
+    el.addEventListener("pointercancel",off);
+    el.addEventListener("pointerleave",off)
+  });
+  function input(){
+    const k=S.keys;
+    return{thr:(k.w||k.arrowup?1:0)-(k.s||k.arrowdown?.6:0),steer:(k.a||k.arrowleft?1:0)-(k.d||k.arrowright?1:0)}
+  }
+
+  /* ---------- SIM ---------- */
+  function target(b){
+    if(b.stop<STOPS.length)return STOPS[b.stop];
+    return{x:0,z:DOCK.z-28,n:"Dock"}
+  }
+  function stepBoat(b,dt){
+    if(b.state==="dock")return;
+    let thr=0,steer=0;
+    if(b.driver==="you"){
+      const i=input();
+      thr=i.thr;
+      steer=i.steer
+    }
+    else{
+      const t=target(b),dx=t.x-b.x,dz=t.z-b.z,want=Math.atan2(-dx,-dz);
+      let d=want-b.h;
+      while(d>Math.PI)d-=2*Math.PI;
+      while(d<-Math.PI)d+=2*Math.PI;
+      steer=Math.max(-1,Math.min(1,d*2));
+      thr=Math.abs(d)<1?.8:.4
+    }
+    b.v+=thr*22*dt;
+    b.v-=b.v*0.55*dt;
+    b.v=Math.max(-8,Math.min(28,b.v));
+    b.h+=steer*1.6*dt*Math.min(1,Math.abs(b.v)/8)*(b.v<0?-1:1);
+    b.x+=-Math.sin(b.h)*b.v*dt;
+    b.z+=-Math.cos(b.h)*b.v*dt;
+    LAND.forEach(L=>{
+      const dx=b.x-L.x,dz=b.z-L.z,d=Math.hypot(dx,dz),min=L.r*1.15+4;
+      if(d<min){
+        b.x=L.x+dx/d*min;
+        b.z=L.z+dz/d*min;
+        if(Math.abs(b.v)>6&&b.driver==="you")toast("Easy on the rocks!");
+        b.v*=.3
+      }
+    });
+    const lim=330;
+    if(Math.hypot(b.x,b.z)>lim){
+      const a=Math.atan2(b.z,b.x);
+      b.x=Math.cos(a)*lim;
+      b.z=Math.sin(a)*lim;
+      b.v*=.3
+    }
+    b.mesh.position.set(b.x,.2+Math.sin(S.t*3+b.i)*.15,b.z);
+    b.mesh.rotation.y=b.h;
+    b.mesh.rotation.z=-steer*.12*Math.min(1,Math.abs(b.v)/10);
+    b.mesh.rotation.x=-Math.min(.12,b.v*.006);
+    const t=target(b);
+    if(Math.hypot(t.x-b.x,t.z-b.z)<11){
+      if(b.stop<STOPS.length){
+        if(b.stop===0){
+          const errs=b.list.filter(x=>x.err).length;
+          if(errs){
+            const f=errs*FINE;
+            S.fines+=f;
+            S.cash-=f;
+            mission("Coast guard check",`${errs} error(s) on ${b.name}'s list · fine $${f}`,3000)
+          }
+        }
+        b.stop++;
+        if(b.driver==="you")mission(b.stop<STOPS.length?`Stop ${b.stop} · ${t.n}`:"Last stop done",b.stop<STOPS.length?`Next: ${STOPS[b.stop].n}`:"Bring her home to the green marker",1800)
+      }
+      else{
+        arrive(b)
+      }
+    }
+  }
+  function arrive(b){
+    const n=b.list.filter(x=>!x.g.dup).length,dur=S.t-b.tripStart;
+    let rev=n*PRICE,tip=0;
+    if(b.driver==="you"&&dur<110)tip=n*TIP;
+    S.cash+=rev+tip;
+    S.boarded+=n;
+    b.state="dock";
+    b.list=[];
+    b.stop=0;
+    b.x=b.home.x;
+    b.z=b.home.z;
+    b.h=0;
+    b.v=0;
+    b.mesh.position.set(b.x,0,b.z);
+    b.mesh.rotation.set(0,b.h,0);
+    b.mesh.userData.people.clear();
+    if(S.ctl===b){
+      setRole("manager")
+    }
+    mission(`${b.name} back · +$${rev+tip}`,tip?`Guests loved the ride · $${tip} tips`:b.driver==="you"?"Slow trip, no tips":"Alex drove",3000);
+    renderDesk()
+  }
+  function tick(dt){
+    if(S.over)return;
+    S.t+=dt;
+    if(S.t>=S.nextArr&&S.guests.filter(g=>!g.done).length<9){
+      const q=S.guests.filter(g=>!g.done);
+      const dup=q.length>2&&Math.random()<.15?rnd(S.guests.filter(g=>g.done&&!g.dup)):null;
+      mkGuest(dup);
+      S.nextArr=S.t+6+Math.random()*7
+    }
+    S.guests.forEach(g=>{
+      if(!g.done&&S.t-g.at>PATIENCE){
+        g.done=true;
+        if(!g.dup){
+          S.lost++;
+          if(S.sel===g){
+            S.sel=null;
+            S.step=0;
+            S.bad=-1
+          }
+          toast(`${g.first} ${g.last} walked away`)
+        }
+      }
+    });
+    S.boats.forEach(b=>stepBoat(b,dt));
+    if(S.role==="manager")autoSelect();
+    $("roleC").disabled=!S.boats.some(b=>b.state!=="dock");
+    if(S.t>=DAY)endGame();
+    // water
+    for(let i=0;i<wpos.count;i++){
+      const x=wbase[i*3],z=wbase[i*3+2];
+      wpos.array[i*3+1]=Math.sin(x*.05+S.t*1.3)*.5+Math.cos(z*.07+S.t*1.1)*.5
+    }
+    wpos.needsUpdate=true;
+    WG.computeVertexNormals();
+    stopMeshes.forEach((m,i)=>{
+      const act=S.boats.some(b=>b.state==="trip"&&b.stop===i);
+      m.userData.ring.scale.setScalar(act?1+Math.sin(S.t*4)*.08:1);
+      m.userData.beam.material.opacity=act?.3:.08;
+      m.userData.ring.material.color.set(act?0xf5c330:0xffffff)
+    });
+    dockMarker.visible=S.boats.some(b=>b.state==="trip"&&b.stop>=STOPS.length);
+    renderHUD();
+    if(S.role==="manager"){
+      renderQueue();
+      if(Math.floor(S.t*4)!==Math.floor((S.t-dt)*4))renderDeskLight()
+    }
+    drawMap()
+  }
+  function renderDeskLight(){
+    const b=curBoat();
+    $("goMe").disabled=$("goAlex").disabled=!b||!b.list.length||S.busy;
+    if(S.role==="captain"){
+      const i=input();
+      $("hSpeed").textContent=Math.round(Math.abs(S.ctl.v)*1.2)+" kn"
+    }
+  }
+  /* camera */
+  const camPos=new THREE.Vector3(0,95,DOCK.z+90),camLook=new THREE.Vector3(0,0,DOCK.z-40);
+  function updateCam(dt){
+    let tp,tl;
+    if(S.role==="captain"&&S.ctl){
+      const b=S.ctl;
+      tp=new THREE.Vector3(b.x+Math.sin(b.h)*28,22,b.z+Math.cos(b.h)*28);
+      tl=new THREE.Vector3(b.x-Math.sin(b.h)*14,2,b.z-Math.cos(b.h)*14)
+    }
+    else{
+      tp=new THREE.Vector3(0,80,DOCK.z+70);
+      tl=new THREE.Vector3(0,0,DOCK.z-50)
+    }
+    const k=Math.min(1,dt*3);
+    camPos.lerp(tp,k);
+    camLook.lerp(tl,k);
+    camera.position.copy(camPos);
+    camera.lookAt(camLook)
+  }
+  /* minimap */
+  const mc=$("map").getContext("2d");
+  function drawMap(){
+    const W=300,H=220,sx=x=>W/2+x*.4,sz=z=>H/2+z*.4;
+    mc.fillStyle="#0b2a3a";
+    mc.fillRect(0,0,W,H);
+    LAND.forEach(L=>{
+      mc.fillStyle="#4d8f45";
+      mc.beginPath();
+      mc.arc(sx(L.x),sz(L.z),L.r*.4,0,7);
+      mc.fill()
+    });
+    STOPS.forEach((s,i)=>{
+      mc.fillStyle=S.boats.some(b=>b.state==="trip"&&b.stop===i)?"#f5c330":"#ffffff";
+      mc.beginPath();
+      mc.arc(sx(s.x),sz(s.z),4,0,7);
+      mc.fill()
+    });
+    mc.fillStyle="#43d17a";
+    mc.fillRect(sx(-8),sz(DOCK.z)-2,16,4);
+    S.boats.forEach(b=>{
+      mc.save();
+      mc.translate(sx(b.x),sz(b.z));
+      mc.rotate(-b.h);
+      mc.fillStyle=b===S.ctl?"#f5c330":"#ff5a4e";
+      mc.beginPath();
+      mc.moveTo(0,-7);
+      mc.lineTo(5,6);
+      mc.lineTo(-5,6);
+      mc.closePath();
+      mc.fill();
+      mc.restore()
+    });
+    if(S.role==="captain"&&S.ctl){
+      const t=target(S.ctl);
+      $("hNext").textContent="Next: "+t.n+" · "+Math.round(Math.hypot(t.x-S.ctl.x,t.z-S.ctl.z)/10)+"00 m";
+      $("hSpeed").textContent=Math.round(Math.abs(S.ctl.v)*1.2)+" kn"
+    }
+  }
+
+  function endGame(){
+    S.over=true;
+    const avg=a=>a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(1)+"s":"—";
+    $("rCash").textContent="$"+S.cash;
+    $("rBoarded").textContent=S.boarded;
+    $("rLost").textContent=S.lost;
+    $("rFines").textContent="$"+S.fines;
+    $("rManual").textContent=avg(S.manualTimes);
+    $("rScan").textContent=avg(S.scanTimes);
+    $("endTitle").textContent=S.fines===0&&S.lost<=2?"Clean lists, full boats.":S.fines?"The coast guard sends regards.":"Guests walked. Dock was slow.";
+    const m=S.manualTimes.length?S.manualTimes.reduce((a,b)=>a+b,0)/S.manualTimes.length:0,s=S.scanTimes.length?S.scanTimes.reduce((a,b)=>a+b,0)/S.scanTimes.length:0;
+    $("endNote").textContent=s&&m?`Manual entry took about ${Math.max(2,Math.round(m/s))}× longer per guest than scanning. Every typo on a list costs $${FINE} at clearance, and every slow check-in is a guest walking away.`:`You never installed ScanPass. Next time, listen to the captain.`;
+    $("end").hidden=false
+  }
+
+  /* ---------- LOOP ---------- */
+  function resize(){
+    const w=innerWidth,h=innerHeight;
+    renderer.setSize(w,h,false);
+    camera.aspect=w/h;
+    camera.updateProjectionMatrix()
+  }
+  addEventListener("resize",resize);
+  resize();
+  let last=performance.now(),running=false;
+  function frame(now){
+    const dt=Math.min(.05,(now-last)/1000);
+    last=now;
+    if(running&&!S.over)tick(dt);
+    updateCam(dt);
+    renderer.render(scene,camera);
+    requestAnimationFrame(frame)
+  }
+  function start(){
+    if(S)S.boats.forEach(b=>scene.remove(b.mesh));
+    newGame();
+    $("intro").hidden=true;
+    $("end").hidden=true;
+    $("unlock").classList.remove("show");
+    setRole("manager");
+    running=true;
+    renderDesk();
+    renderQueue();
+    mission("Charter Rush","Simpson Bay · 07:30 · dock opens",2600)
+  }
+  $("startBtn").onclick=start;
+  $("againBtn").onclick=start;
+  newGame();
+  renderDesk();
+  renderQueue();
+  drawMap();
+  requestAnimationFrame(frame);
 })();
 </script>
