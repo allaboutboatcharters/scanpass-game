@@ -393,33 +393,36 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   dockMarker.position.set(0,.6,DOCK.z-28);
   dockMarker.visible=false;
   scene.add(dockMarker);
-  // boats
+  // boats: shared geometries/materials for boats and people (live for the whole session, never disposed)
+  const smat=new Map(),sharedMat=c=>smat.get(c)||smat.set(c,new THREE.MeshLambertMaterial({color:c})).get(c);
+  const BG={hull:new THREE.BoxGeometry(4.2,1.6,10),bow:new THREE.ConeGeometry(2.1,4,4),deck:new THREE.BoxGeometry(3.6,.3,8),cons:new THREE.BoxGeometry(2,1.6,1.6),glass:new THREE.BoxGeometry(2.2,1,.3),bimini:new THREE.BoxGeometry(3.6,.2,4),eng:new THREE.BoxGeometry(1.2,1.6,1),body:new THREE.CylinderGeometry(.5,.5,1.4,6),head:new THREE.SphereGeometry(.42,8,6)};
+  const glassMat=new THREE.MeshPhongMaterial({color:0x2cc0d6,transparent:true,opacity:.6});
   function makeBoat(color){
     const g=new THREE.Group();
-    const hull=new THREE.Mesh(new THREE.BoxGeometry(4.2,1.6,10),mat(color));
+    const hull=new THREE.Mesh(BG.hull,sharedMat(color));
     hull.position.y=.9;
     hull.castShadow=true;
     g.add(hull);
-    const bow=new THREE.Mesh(new THREE.ConeGeometry(2.1,4,4),mat(color));
+    const bow=new THREE.Mesh(BG.bow,sharedMat(color));
     bow.rotation.x=-Math.PI/2;
     bow.rotation.z=Math.PI/4;
     bow.position.set(0,.9,-7);
     bow.scale.y=1;
     g.add(bow);
-    const deck=new THREE.Mesh(new THREE.BoxGeometry(3.6,.3,8),mat(0xf1e6cf));
+    const deck=new THREE.Mesh(BG.deck,sharedMat(0xf1e6cf));
     deck.position.set(0,1.8,-.4);
     g.add(deck);
-    const cons=new THREE.Mesh(new THREE.BoxGeometry(2,1.6,1.6),mat(0xffffff));
+    const cons=new THREE.Mesh(BG.cons,sharedMat(0xffffff));
     cons.position.set(0,2.7,-1);
     g.add(cons);
-    const glass=new THREE.Mesh(new THREE.BoxGeometry(2.2,1,.3),new THREE.MeshPhongMaterial({color:0x2cc0d6,transparent:true,opacity:.6}));
+    const glass=new THREE.Mesh(BG.glass,glassMat);
     glass.position.set(0,3.4,-2);
     glass.rotation.x=-.4;
     g.add(glass);
-    const bimini=new THREE.Mesh(new THREE.BoxGeometry(3.6,.2,4),mat(0x1B3A5C));
+    const bimini=new THREE.Mesh(BG.bimini,sharedMat(0x1B3A5C));
     bimini.position.set(0,4.4,1.5);
     g.add(bimini);
-    const eng=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.6,1),mat(0x222));
+    const eng=new THREE.Mesh(BG.eng,sharedMat(0x222));
     eng.position.set(0,1.4,5.4);
     g.add(eng);
     const people=new THREE.Group();
@@ -654,10 +657,10 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   };
   function addPerson(b){
     const n=b.list.length,p=new THREE.Group();
-    const body=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,1.4,6),mat(rnd([0xff8a5b,0x5bc0ff,0xffe15b,0xb28bff,0x7bffb0])));
+    const body=new THREE.Mesh(BG.body,sharedMat(rnd([0xff8a5b,0x5bc0ff,0xffe15b,0xb28bff,0x7bffb0])));
     body.position.y=.7;
     p.add(body);
-    const head=new THREE.Mesh(new THREE.SphereGeometry(.42,8,6),mat(0xe8b990));
+    const head=new THREE.Mesh(BG.head,sharedMat(0xe8b990));
     head.position.y=1.7;
     p.add(head);
     p.position.set(((n-1)%2?1.1:-1.1),2,1.2+Math.floor((n-1)/2)*1.3-1.5);
