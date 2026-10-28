@@ -50,7 +50,14 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
 @media (max-width:700px){.fields{grid-template-columns:repeat(2,1fr)}}
 .field label{display:block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .field .v{font-family:var(--mono);font-size:12px;min-height:18px;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,.08);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.field.ok .v{background:rgba(67,209,122,.25)}.field.bad .v{background:rgba(255,90,78,.35);text-decoration:line-through}
+.field.ok .v{background:rgba(67,209,122,.25)}
+.field.tap{cursor:pointer;border-radius:6px}.field.tap:hover .v{outline:1.5px solid var(--yellow)}
+.deskrow{display:grid;grid-template-columns:minmax(0,150px) 1fr;gap:8px;align-items:start}
+.passport{border:1.5px solid var(--line);border-radius:8px;padding:5px 7px;background:rgba(20,40,70,.55);font-size:11px;min-width:0}
+.passport .ph{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--yellow);margin-bottom:2px}
+.passport .pr{display:flex;justify-content:space-between;gap:6px;line-height:1.45}
+.passport .pr span{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.passport .pr b{font-family:var(--mono);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .actions button,.btn{font:inherit;font-weight:700;border:0;border-radius:8px;padding:9px 12px;background:#2b4b68;color:#fff;cursor:pointer;flex:1;min-width:110px}
 .btn-scan{background:var(--sea)!important;color:#06222a!important}
@@ -108,8 +115,11 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   .desk{gap:6px;overflow:auto;touch-action:pan-y;overscroll-behavior:contain}
   .desk .queue{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-height:none;touch-action:pan-x}
   .guest{flex:none}
-  .fields{grid-template-columns:repeat(3,1fr)}
+  .fields{grid-template-columns:repeat(2,minmax(0,1fr))}
   .field .v{font-size:11px}
+  .deskrow{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:6px}
+  .passport{font-size:10px;padding:3px 6px}
+  .passport .ph{margin-bottom:0}
   .hint{margin-top:4px}
   .helm .info b{font-size:22px}
 }
@@ -167,7 +177,9 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     <div class="panel">
       <h3>Check-in desk <span id="deskMode">manual entry</span></h3>
       <div class="boatsel" id="boatsel"></div>
-      <div class="fields">
+      <div class="deskrow">
+      <div class="passport" id="passport"></div>
+      <div class="fields" id="fields">
         <div class="field" id="f0"><label>Surname</label><div class="v"></div></div>
         <div class="field" id="f1"><label>Given names</label><div class="v"></div></div>
         <div class="field" id="f2"><label>Date of birth</label><div class="v"></div></div>
@@ -175,9 +187,9 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
         <div class="field" id="f4"><label>Nationality</label><div class="v"></div></div>
         <div class="field" id="f5"><label>Boat</label><div class="v"></div></div>
       </div>
+      </div>
       <div class="actions">
         <button id="typeBtn" disabled>Type next field</button>
-        <button id="fixBtn" class="btn-ghost" disabled>Fix typo</button>
         <button id="scanBtn" class="btn-scan" disabled hidden>Scan with ScanPass</button>
         <button id="skipBtn" class="btn-ghost" disabled hidden>Skip duplicate</button>
         <button id="addBtn" class="btn-ghost" disabled>Add to list</button>
@@ -382,7 +394,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   /* ---------- STATE ---------- */
   let S;
   function newGame(){
-    S={t:0,cash:0,fines:0,boarded:0,lost:0,guests:[],nextArr:2,sel:null,step:0,bad:-1,busy:false,scan:false,manualDone:0,manualTimes:[],scanTimes:[],startAt:null,errM:0,errS:0,fineM:0,fineS:0,over:false,role:"manager",ctl:null,
+    S={t:0,cash:0,fines:0,boarded:0,lost:0,guests:[],nextArr:2,sel:null,step:0,bad:{},busy:false,scan:false,manualDone:0,manualTimes:[],scanTimes:[],startAt:null,errM:0,errS:0,fineM:0,fineS:0,over:false,role:"manager",ctl:null,
       boats:BOAT_DEFS.map((d,i)=>{
         const b={...d,i,list:[],state:"dock",x:d.home.x,z:d.home.z,h:0,v:0,stop:0,tripStart:0,driver:null,mesh:makeBoat(d.color)};
         b.mesh.position.set(b.x,0,b.z);
@@ -444,31 +456,34 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   }
   function garble(s){
     const i=Math.floor(Math.random()*Math.max(1,s.length-1));
-    return s.slice(0,i)+(s[i]==="0"?"O":"X")+s.slice(i+1)
+    return s.slice(0,i)+(s[i]==="0"?"O":s[i]==="X"?"Y":"X")+s.slice(i+1)
+  }
+  const PP_ROWS=["Surname","Given","Born","No.","Nat."];
+  function fieldVals(g,b){
+    return[g.last.toUpperCase(),g.first.toUpperCase(),g.dob,g.pno,g.nat,b?b.name:"—"]
   }
   function renderDesk(){
     const g=S.sel,b=curBoat();
     $("boatsel").innerHTML=S.boats.map(x=>`<button data-i="${x.i}" class="${x===b?"on":""}" ${x.state!=="dock"?"disabled":""}>${x.name} · ${x.state==="dock"?x.list.length+" on list":x.state==="trip"?"on tour":"returning"}</button>`).join("");
-    const vals=g?[g.last.toUpperCase(),g.first.toUpperCase(),g.dob,g.pno,g.nat,b?b.name:"—"]:["","","","","",""];
+    const vals=g?fieldVals(g,b):["","","","","",""];
+    $("passport").innerHTML=g?`<div class="ph">Passport · ${g.nat}</div>`+PP_ROWS.map((r,i)=>`<div class="pr"><span>${r}</span><b>${vals[i]}</b></div>`).join(""):`<div class="ph">Passport</div><div class="empty">No guest at the desk.</div>`;
     for(let i=0;i<6;i++){
       const f=$("f"+i);
       const show=g&&(S.scan?S.step>=FIELDS:i<S.step||(i===5&&S.step>0));
-      f.querySelector(".v").textContent=show?(S.bad===i?garble(vals[i]):vals[i]):"";
-      f.className="field"+(show?(S.bad===i?" bad":" ok"):"")
+      f.querySelector(".v").textContent=show?(i in S.bad?S.bad[i]:vals[i]):"";
+      f.className="field"+(show?" ok":"")+(show&&!S.scan&&i<FIELDS?" tap":"")
     }
     const done=g&&S.step>=FIELDS,dupShown=S.scan&&g&&g.dup&&done;
     $("typeBtn").hidden=S.scan;
-    $("fixBtn").hidden=S.scan;
     $("scanBtn").hidden=!S.scan;
-    $("typeBtn").disabled=!g||!b||S.busy||done||S.bad>=0;
-    $("fixBtn").disabled=!g||S.busy||S.bad<0;
+    $("typeBtn").disabled=!g||!b||S.busy||done;
     $("scanBtn").disabled=!g||!b||S.busy||done;
     $("skipBtn").hidden=!dupShown;
     $("skipBtn").disabled=!dupShown;
     $("addBtn").disabled=!g||!b||S.busy||!done||dupShown;
     $("goMe").disabled=$("goAlex").disabled=!b||!b.list.length||S.busy;
     $("deskMode").textContent=S.scan?"ScanPass · on-device":"manual entry";
-    $("hint").textContent=!b?"No boat at the dock. Guests are waiting…":!g?"Next guest steps up automatically.":S.scan?(done?(dupShown?"Duplicate caught before it reached the list.":"All fields read. Add to list."):"Point the camera at the data page."):S.bad>=0?"That field came out wrong. Fix it, or the coast guard will.":done?"All typed. Add to list — did you check the fields?":`Field ${S.step+1} of ${FIELDS}.`
+    $("hint").textContent=!b?"No boat at the dock. Guests are waiting…":!g?"Next guest steps up automatically.":S.scan?(done?(dupShown?"Duplicate caught before it reached the list.":"All fields read. Add to list."):"Point the camera at the data page."):done?"All typed. Wrong field? Tap it to retype.":`Field ${S.step+1} of ${FIELDS}.`
     const ch=closingHint(b);
     if(ch)$("hint").textContent=ch;
   }
@@ -482,7 +497,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     if(S.busy)return;
     S.sel=g;
     S.step=0;
-    S.bad=-1;
+    S.bad={};
     S.startAt=null;
     renderDesk();
     renderQueue()
@@ -510,21 +525,24 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     renderDesk();
     setTimeout(()=>{
       S.busy=false;
-      if(Math.random()<0.28)S.bad=S.step;
+      if(!S.scan&&Math.random()<0.08)S.bad[S.step]=garble(fieldVals(S.sel,curBoat())[S.step]);
       S.step++;
       renderDesk()
     },MANUAL_STEP)
   };
-  $("fixBtn").onclick=()=>{
-    if(S.bad<0||S.busy)return;
+  $("fields").addEventListener("click",e=>{
+    const f=e.target.closest(".field.tap");
+    if(!f||!S.sel||S.busy||S.scan)return;
+    const i=+f.id.slice(1),g=S.sel;
     S.busy=true;
     renderDesk();
+    $("hint").textContent="Retyping…";
     setTimeout(()=>{
       S.busy=false;
-      S.bad=-1;
+      if(S.sel===g)delete S.bad[i];
       renderDesk()
     },MANUAL_STEP)
-  };
+  });
   $("scanBtn").onclick=()=>{
     if(!S.sel||S.busy)return;
     if(S.startAt===null)S.startAt=S.t;
@@ -534,7 +552,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     setTimeout(()=>{
       S.busy=false;
       S.step=FIELDS;
-      S.bad=-1;
+      S.bad={};
       renderDesk()
     },SCAN_STEP)
   };
@@ -549,8 +567,10 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   $("addBtn").onclick=()=>{
     const g=S.sel,b=curBoat();
     if(!g||!b)return;
-    const err=S.bad>=0||(g.dup&&!S.scan);
-    b.list.push({g,err,scan:S.scan});
+    const vals=fieldVals(g,b);
+    const typos=S.scan?[]:Object.keys(S.bad).map(i=>[S.bad[i],vals[i]]);
+    const err=!S.scan&&(typos.length>0||g.dup);
+    b.list.push({g,err,scan:S.scan,typos});
     g.done=true;
     const took=S.startAt===null?0:S.t-S.startAt;
     S.startAt=null;
@@ -561,7 +581,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     addPerson(b);
     S.sel=null;
     S.step=0;
-    S.bad=-1;
+    S.bad={};
     autoSelect();
     if(!S.scan&&S.manualDone>=3&&!S.unlockShown){
       S.unlockShown=true;
@@ -576,7 +596,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     $("unlock").classList.remove("show");
     mission("ScanPass installed","One tap per passport. No cloud, no fees.");
     S.step=0;
-    S.bad=-1;
+    S.bad={};
     S.startAt=null;
     renderDesk()
   };
@@ -602,7 +622,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     if(S.sel){
       S.sel=null;
       S.step=0;
-      S.bad=-1
+      S.bad={}
     }
     if(me){
       setRole("captain",b)
@@ -744,7 +764,9 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
                 S.fineM+=FINE
               }
             });
-            mission("Coast guard check",`${errs} error(s) on ${b.name}'s list · fine $${f}`,3000)
+            const e0=b.list.find(x=>x.err),ex=e0.typos&&e0.typos.length?`${e0.typos[0][0]} ≠ ${e0.typos[0][1]}`:`duplicate ${e0.g.pno}`;
+            const more=b.list.reduce((a,x)=>a+(x.err?Math.max(1,x.typos?x.typos.length:0):0),0)-1;
+            mission("Coast guard check",`Coast guard: ${ex}${more>0?` +${more} more`:""} · fine $${f}`,3000)
           }
         }
         b.stop++;
@@ -800,7 +822,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
           if(S.sel===g){
             S.sel=null;
             S.step=0;
-            S.bad=-1
+            S.bad={}
           }
           toast(`${g.first} ${g.last} walked away`)
         }
