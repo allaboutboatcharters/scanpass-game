@@ -748,6 +748,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     const t=target(b);
     if(Math.hypot(t.x-b.x,t.z-b.z)<11){
       if(b.stop<STOPS.length){
+        let cg="";
         if(b.stop===0){
           const errs=b.list.filter(x=>x.err).length;
           if(errs){
@@ -766,11 +767,12 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
             });
             const e0=b.list.find(x=>x.err),ex=e0.typos&&e0.typos.length?`${e0.typos[0][0]} ≠ ${e0.typos[0][1]}`:`duplicate ${e0.g.pno}`;
             const more=b.list.reduce((a,x)=>a+(x.err?Math.max(1,x.typos?x.typos.length:0):0),0)-1;
-            mission("Coast guard check",`Coast guard: ${ex}${more>0?` +${more} more`:""} · fine $${f}`,3000)
+            cg=`Coast guard: ${ex}${more>0?` +${more} more`:""} · fine $${f}`
           }
         }
         b.stop++;
-        if(b.driver==="you")mission(b.stop<STOPS.length?`Stop ${b.stop} · ${t.n}`:"Last stop done",b.stop<STOPS.length?`Next: ${STOPS[b.stop].n}`:"Bring her home to the green marker",1800)
+        if(cg)mission("Coast guard check",cg+(b.driver==="you"?` · Next: ${STOPS[b.stop].n}`:""),3000);
+        else if(b.driver==="you")mission(b.stop<STOPS.length?`Stop ${b.stop} · ${t.n}`:"Last stop done",b.stop<STOPS.length?`Next: ${STOPS[b.stop].n}`:"Bring her home to the green marker",1800)
       }
       else{
         arrive(b)
