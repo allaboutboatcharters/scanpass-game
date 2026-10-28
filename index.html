@@ -937,7 +937,8 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     camPos.lerp(tp,k);
     camLook.lerp(tl,k);
     camera.position.copy(camPos);
-    camera.lookAt(camLook)
+    camera.lookAt(camLook);
+    return camPos.distanceToSquared(tp)<1e-4&&camLook.distanceToSquared(tl)<1e-4
   }
   /* minimap */
   const mc=$("map").getContext("2d");
@@ -985,6 +986,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   }
   function endGame(){
     S.over=true;
+    needRender=true;
     const unpaid=S.boats.reduce((a,b)=>a+b.list.filter(x=>!x.g.dup).length,0);
     $("rUnpaid").textContent=unpaid;
     $("rUnpaidBox").hidden=!unpaid;
@@ -1010,18 +1012,19 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     const w=innerWidth,h=innerHeight;
     renderer.setSize(w,h,false);
     camera.aspect=w/h;
-    camera.updateProjectionMatrix()
+    camera.updateProjectionMatrix();
+    needRender=true
   }
+  let last=performance.now(),running=false,perfHook=null,needRender=true;
   addEventListener("resize",resize);
   resize();
-  let last=performance.now(),running=false,perfHook=null;
   function frame(now){
     const t0=perfHook&&performance.now();
     const dt=Math.min(.05,(now-last)/1000);
     last=now;
     if(running&&!S.over)tick(dt);
-    updateCam(dt);
-    renderer.render(scene,camera);
+    // intro / end of day: static scene under the overlay, render only until the camera settles
+    if(!updateCam(dt)||running&&!S.over||needRender){renderer.render(scene,camera);needRender=false}
     if(perfHook)perfHook(now,t0);
     requestAnimationFrame(frame)
   }
