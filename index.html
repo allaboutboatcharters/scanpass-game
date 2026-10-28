@@ -340,6 +340,36 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   block(0,1.6,DOCK.z,26,.8,4,0x8a6a3e);
   block(0,1.6,DOCK.z-14,4,.8,30,0x8a6a3e);
   for(let i=-12;i<=12;i+=6)[DOCK.z+2,DOCK.z-2].forEach(z=>block(i,.4,z,1,3,1,0x5a4225));
+  // merge the static land into one mesh per shadow-flag pair (~500 draw calls -> 4): world matrix baked into vertices, material color -> vertex color
+  (function mergeStatic(){
+    grp.updateMatrixWorld(true);
+    const bins={};
+    grp.children.forEach(m=>{const k=+m.castShadow+2*m.receiveShadow;(bins[k]=bins[k]||[]).push(m)});
+    Object.keys(bins).forEach(k=>{
+      const pos=[],nor=[],col=[],idx=[];
+      bins[k].forEach(m=>{
+        const g=m.geometry.clone().applyMatrix4(m.matrixWorld),c=m.material.color,n=pos.length/3,p=g.attributes.position;
+        pos.push(...p.array);
+        nor.push(...g.attributes.normal.array);
+        for(let i=0;i<p.count;i++)col.push(c.r,c.g,c.b);
+        g.index.array.forEach(i=>idx.push(i+n));
+        g.dispose();
+        m.geometry.dispose();
+        m.material.dispose()
+      });
+      const G=new THREE.BufferGeometry();
+      G.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
+      G.setAttribute("normal",new THREE.Float32BufferAttribute(nor,3));
+      G.setAttribute("color",new THREE.Float32BufferAttribute(col,3));
+      G.setIndex(idx);
+      const M=new THREE.Mesh(G,new THREE.MeshLambertMaterial({vertexColors:true}));
+      M.castShadow=!!(k&1);
+      M.receiveShadow=!!(k&2);
+      M.userData.merged=bins[k].length;
+      scene.add(M)
+    });
+    scene.remove(grp)
+  })();
   // stops: markers
   const stopMeshes=STOPS.map(s=>{
     const g=new THREE.Group();
