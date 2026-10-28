@@ -985,13 +985,15 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   }
   addEventListener("resize",resize);
   resize();
-  let last=performance.now(),running=false;
+  let last=performance.now(),running=false,perfHook=null;
   function frame(now){
+    const t0=perfHook&&performance.now();
     const dt=Math.min(.05,(now-last)/1000);
     last=now;
     if(running&&!S.over)tick(dt);
     updateCam(dt);
     renderer.render(scene,camera);
+    if(perfHook)perfHook(now,t0);
     requestAnimationFrame(frame)
   }
   function start(){
@@ -1020,8 +1022,34 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
       newGame,start,setRole,castOff,select,arrive,endGame,tick,mission,
       renderDesk,renderQueue,curBoat,target,
       STOPS,DOCK,LAND,ARRIVALS_END,DAY_HARD,closingHint,
-      PATIENCE,SCAN_STEP,WAVES,ARR_CALM,ARR_WAVE,QUEUE_MAX
+      PATIENCE,SCAN_STEP,WAVES,ARR_CALM,ARR_WAVE,QUEUE_MAX,perf
+    };
+    // perf: CPU ms of frame() (tick+render submit) and rAF intervals over the last 120 frames
+    // autoReset off: three resets info after the shadow pass, so calls/triangles would miss shadow draws
+    const ms=[],iv=[],R=renderer.info;
+    R.autoReset=false;
+    let prev=0,calls=0,tris=0;
+    perfHook=(now,t0)=>{
+      ms.push(performance.now()-t0);
+      if(prev)iv.push(now-prev);
+      prev=now;
+      if(ms.length>120)ms.shift();
+      if(iv.length>120)iv.shift();
+      calls=R.render.calls;
+      tris=R.render.triangles;
+      R.reset()
+    };
+    function perf(){
+      const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0,p95=a=>a.length?[...a].sort((x,y)=>x-y)[Math.floor(a.length*.95)]:0,r=x=>Math.round(x*100)/100;
+      return{calls,triangles:tris,geometries:R.memory.geometries,textures:R.memory.textures,programs:R.programs.length,
+        msAvg:r(avg(ms)),msP95:r(p95(ms)),fps:r(avg(iv)?1000/avg(iv):0),frames:ms.length,
+        dpr:renderer.getPixelRatio(),antialias:renderer.getContext().getContextAttributes().antialias,shadowMapSize:sun.shadow.mapSize.x}
     }
+    const ov=document.createElement("div");
+    ov.id="perfOv";
+    ov.style.cssText="position:fixed;left:4px;bottom:4px;z-index:30;pointer-events:none;font:11px/1.2 monospace;color:#fff;background:rgba(0,0,0,.55);padding:2px 5px;border-radius:4px";
+    document.body.appendChild(ov);
+    setInterval(()=>{const p=perf();ov.textContent=Math.round(p.fps)+" fps · "+p.calls+" calls · "+p.msAvg+" ms"},500)
   }
 })();
 </script>
