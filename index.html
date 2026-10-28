@@ -256,6 +256,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
 <script>
 (function(){
   const $=id=>document.getElementById(id);
+  const setText=(id,v)=>{const el=$(id);v=String(v);if(el.textContent!==v)el.textContent=v};
   const FIRST=["Maria","Jonas","Priya","Lucas","Amara","Tomasz","Sofia","Ethan","Chloé","Ravi","Ingrid","Mateo","Hana","Noah","Leila","Finn","Olivia","Kwame","Elena","Oscar","Yuki","Liam","Nadia","Pierre"];
   const LAST=["Becker","Okafor","Smirnov","Lindqvist","Dubois","Patel","Moreau","Nakamura","Fernandes","Kowalski","Johansson","Reyes","Haddad","Brown","Costa","Novak","Schmidt","Osei","Petrov","Laurent"];
   const NAT=["DEU","NLD","FRA","USA","CAN","GBR","SWE","ITA","ESP","BRA","IND","JPN"];
@@ -543,10 +544,10 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     if(ch)$("hint").textContent=ch;
   }
   function renderHUD(){
-    $("cash").textContent="$"+S.cash;
-    $("boarded").textContent=S.boarded;
-    $("fines").textContent="$"+S.fines;
-    $("clock").textContent=clock()
+    setText("cash","$"+S.cash);
+    setText("boarded",S.boarded);
+    setText("fines","$"+S.fines);
+    setText("clock",clock())
   }
   function select(g){
     if(S.busy)return;
@@ -917,10 +918,10 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     const b=curBoat();
     $("goMe").disabled=$("goAlex").disabled=!b||!b.list.length||S.busy;
     const ch=closingHint(b);
-    if(ch&&S.role==="manager")$("hint").textContent=ch;
+    if(ch&&S.role==="manager")setText("hint",ch);
     if(S.role==="captain"){
       const i=input();
-      $("hSpeed").textContent=Math.round(Math.abs(S.ctl.v)*1.2)+" kn"
+      setText("hSpeed",Math.round(Math.abs(S.ctl.v)*1.2)+" kn")
     }
   }
   /* camera */
@@ -978,8 +979,8 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     });
     if(S.role==="captain"&&S.ctl){
       const t=target(S.ctl);
-      $("hNext").textContent="Next: "+t.n+" · "+Math.round(Math.hypot(t.x-S.ctl.x,t.z-S.ctl.z)/10)+"00 m";
-      $("hSpeed").textContent=Math.round(Math.abs(S.ctl.v)*1.2)+" kn"
+      setText("hNext","Next: "+t.n+" · "+Math.round(Math.hypot(t.x-S.ctl.x,t.z-S.ctl.z)/10)+"00 m");
+      setText("hSpeed",Math.round(Math.abs(S.ctl.v)*1.2)+" kn")
     }
   }
 
