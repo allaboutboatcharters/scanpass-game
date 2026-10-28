@@ -53,11 +53,19 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
 .field.ok .v{background:rgba(67,209,122,.25)}
 .field.tap{cursor:pointer;border-radius:6px}.field.tap:hover .v{outline:1.5px solid var(--yellow)}
 .deskrow{display:grid;grid-template-columns:minmax(0,150px) 1fr;gap:8px;align-items:start}
-.passport{border:1.5px solid var(--line);border-radius:8px;padding:5px 7px;background:rgba(20,40,70,.55);font-size:11px;min-width:0}
+.passport{border:1.5px solid var(--line);border-radius:8px;padding:5px 7px;background:rgba(20,40,70,.55);font-size:11px;min-width:0;position:relative;overflow:hidden;container-type:inline-size}
 .passport .ph{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--yellow);margin-bottom:2px}
-.passport .pr{display:flex;justify-content:space-between;gap:6px;line-height:1.45}
+.passport .pr{display:flex;justify-content:space-between;gap:6px;line-height:1.2}
 .passport .pr span{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .passport .pr b{font-family:var(--mono);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.passport .mrz{font-family:var(--mono);font-size:4.6px;font-size:calc(100cqw / 27);line-height:1.2;white-space:pre;overflow:hidden;margin-top:2px;color:rgba(255,255,255,.75);background:linear-gradient(90deg,transparent 40%,rgba(255,211,61,.55) 50%,transparent 60%) no-repeat;background-size:250% 100%;background-position:150% 0}
+.passport.scan::after{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--yellow);box-shadow:0 0 8px 2px var(--yellow);animation:ppSweep .45s linear both}
+.passport.scan .mrz{animation:mrzLit .3s linear .2s both}
+.field.fill .v{animation:fieldIn .15s ease-out both;animation-delay:calc(400ms + var(--d) * 80ms)}
+@keyframes ppSweep{from{top:0}to{top:calc(100% - 2px)}}
+@keyframes mrzLit{from{background-position:150% 0;color:var(--yellow)}to{background-position:-50% 0;color:var(--yellow)}}
+@keyframes fieldIn{from{opacity:0;background:rgba(255,211,61,.5)}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.passport.scan::after{display:none}.passport.scan .mrz,.field.fill .v{animation:none}.field.fill .v{opacity:0}}
 .actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .actions button,.btn{font:inherit;font-weight:700;border:0;border-radius:8px;padding:9px 12px;background:#2b4b68;color:#fff;cursor:pointer;flex:1;min-width:110px}
 .btn-scan{background:var(--sea)!important;color:#06222a!important}
@@ -120,6 +128,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   .deskrow{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:6px}
   .passport{font-size:10px;padding:3px 6px}
   .passport .ph{margin-bottom:0}
+  .passport .pr{line-height:1.25}.passport .mrz{line-height:1}
   .hint{margin-top:4px}
   .helm .info b{font-size:22px}
 }
@@ -462,16 +471,29 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   function fieldVals(g,b){
     return[g.last.toUpperCase(),g.first.toUpperCase(),g.dob,g.pno,g.nat,b?b.name:"—"]
   }
+  const cd=s=>[...s].reduce((t,c,i)=>t+(c==="<"?0:c<="9"?+c:c.charCodeAt(0)-55)*[7,3,1][i%3],0)%10;
+  const mz=s=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z]/g,"<");
+  function mrz(g){
+    const doc=(g.pno+"<<<<<<<<<").slice(0,9),dob=g.dob.slice(2).replace(/-/g,""),exp="300615",opt="<".repeat(14);
+    const a=doc+cd(doc),b=dob+cd(dob),c=exp+cd(exp),o=opt+cd(opt);
+    return[("P<"+g.nat+mz(g.last)+"<<"+mz(g.first)+"<".repeat(44)).slice(0,44),a+g.nat+b+"<"+c+o+cd(a+b+c+o)]
+  }
+  let ppHtml="";
   function renderDesk(){
     const g=S.sel,b=curBoat();
     $("boatsel").innerHTML=S.boats.map(x=>`<button data-i="${x.i}" class="${x===b?"on":""}" ${x.state!=="dock"?"disabled":""}>${x.name} · ${x.state==="dock"?x.list.length+" on list":x.state==="trip"?"on tour":"returning"}</button>`).join("");
     const vals=g?fieldVals(g,b):["","","","","",""];
-    $("passport").innerHTML=g?`<div class="ph">Passport · ${g.nat}</div>`+PP_ROWS.map((r,i)=>`<div class="pr"><span>${r}</span><b>${vals[i]}</b></div>`).join(""):`<div class="ph">Passport</div><div class="empty">No guest at the desk.</div>`;
+    const pp=g?`<div class="ph">Passport · ${g.nat}</div>`+PP_ROWS.map((r,i)=>`<div class="pr"><span>${r}</span><b>${vals[i]}</b></div>`).join("")+`<div class="mrz">${mrz(g).join("\n").replace(/</g,"&lt;")}</div>`:`<div class="ph">Passport</div><div class="empty">No guest at the desk.</div>`;
+    if(pp!==ppHtml)$("passport").innerHTML=ppHtml=pp;
+    const scanning=!!g&&S.scan&&S.busy;
+    $("passport").classList.toggle("scan",scanning);
     for(let i=0;i<6;i++){
       const f=$("f"+i);
       const show=g&&(S.scan?S.step>=FIELDS:i<S.step||(i===5&&S.step>0));
-      f.querySelector(".v").textContent=show?(i in S.bad?S.bad[i]:vals[i]):"";
-      f.className="field"+(show?" ok":"")+(show&&!S.scan&&i<FIELDS?" tap":"")
+      const fill=!show&&scanning&&i<FIELDS;
+      f.querySelector(".v").textContent=show?(i in S.bad?S.bad[i]:vals[i]):fill?vals[i]:"";
+      f.className="field"+(show?" ok":"")+(show&&!S.scan&&i<FIELDS?" tap":"")+(fill?" fill":"");
+      f.style.setProperty("--d",i)
     }
     const done=g&&S.step>=FIELDS,dupShown=S.scan&&g&&g.dup&&done;
     $("typeBtn").hidden=S.scan;
