@@ -225,7 +225,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
       <div id="rUnpaidBox" hidden><b id="rUnpaid">0</b><span>Not paid · still on a boat</span></div>
     </div>
     <p id="endNote"></p>
-    <div class="cta"><b>Real dock, real paperwork?</b><span>ScanPass reads the passport on your iPhone, no cloud, no per-scan fees, and exports the crew &amp; passenger list as XLSX or PDF.</span><a href="https://scanpass.pro" target="_blank" rel="noopener">scanpass.pro → get launch updates</a></div>
+    <div class="cta"><b>Real dock, real paperwork?</b><span>ScanPass reads the passport on your iPhone, no cloud, no per-scan fees, and exports the crew &amp; passenger list as XLSX or PDF.</span><a href="https://scanpass.pro/?utm_source=game&amp;utm_medium=cta" target="_blank" rel="noopener">scanpass.pro → get launch updates</a></div>
     <button class="btn btn-go" id="againBtn">Play again</button>
   </div>
 </div>
@@ -238,7 +238,8 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
   const FIRST=["Maria","Jonas","Priya","Lucas","Amara","Tomasz","Sofia","Ethan","Chloé","Ravi","Ingrid","Mateo","Hana","Noah","Leila","Finn","Olivia","Kwame","Elena","Oscar","Yuki","Liam","Nadia","Pierre"];
   const LAST=["Becker","Okafor","Smirnov","Lindqvist","Dubois","Patel","Moreau","Nakamura","Fernandes","Kowalski","Johansson","Reyes","Haddad","Brown","Costa","Novak","Schmidt","Osei","Petrov","Laurent"];
   const NAT=["DEU","NLD","FRA","USA","CAN","GBR","SWE","ITA","ESP","BRA","IND","JPN"];
-  const PRICE=120,FINE=150,TIP=40,PATIENCE=75,ARRIVALS_END=300,DAY_HARD=420,MANUAL_STEP=1000,SCAN_STEP=700,FIELDS=5;
+  const PRICE=120,FINE=150,TIP=40,PATIENCE=50,ARRIVALS_END=300,DAY_HARD=420,MANUAL_STEP=1000,SCAN_STEP=900,FIELDS=5;
+  const WAVES=[[60,90],[180,210]],ARR_CALM=[10,15],ARR_WAVE=[2,3.5],QUEUE_MAX=14;
   const rnd=a=>a[Math.floor(Math.random()*a.length)];
   const pad=n=>String(n).padStart(2,"0");
   const DOCK={x:0,z:118};
@@ -576,6 +577,7 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     mission("ScanPass installed","One tap per passport. No cloud, no fees.");
     S.step=0;
     S.bad=-1;
+    S.startAt=null;
     renderDesk()
   };
   function addPerson(b){
@@ -775,14 +777,20 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
     mission(`${b.name} back · +$${rev+tip}`,tip?`Guests loved the ride · $${tip} tips`:b.driver==="you"?"Slow trip, no tips":"Alex drove",3000);
     renderDesk()
   }
+  function nextArrival(t){
+    const span=([a,b])=>a+Math.random()*(b-a);
+    if(WAVES.some(([a,b])=>t>=a&&t<b))return t+span(ARR_WAVE);
+    const w=WAVES.find(([a])=>a>t);
+    return Math.min(t+span(ARR_CALM),w?w[0]:Infinity)
+  }
   function tick(dt){
     if(S.over)return;
     S.t+=dt;
-    if(S.t<ARRIVALS_END&&S.t>=S.nextArr&&S.guests.filter(g=>!g.done).length<9){
+    if(S.t<ARRIVALS_END&&S.t>=S.nextArr&&S.guests.filter(g=>!g.done).length<QUEUE_MAX){
       const q=S.guests.filter(g=>!g.done);
       const dup=q.length>2&&Math.random()<.15?rnd(S.guests.filter(g=>g.done&&!g.dup)):null;
       mkGuest(dup);
-      S.nextArr=S.t+6+Math.random()*7
+      S.nextArr=nextArrival(S.t)
     }
     S.guests.forEach(g=>{
       if(!g.done&&S.t-g.at>PATIENCE){
@@ -965,7 +973,8 @@ button:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
       get S(){return S},
       newGame,start,setRole,castOff,select,arrive,endGame,tick,mission,
       renderDesk,renderQueue,curBoat,target,
-      STOPS,DOCK,LAND,ARRIVALS_END,DAY_HARD,closingHint
+      STOPS,DOCK,LAND,ARRIVALS_END,DAY_HARD,closingHint,
+      PATIENCE,SCAN_STEP,WAVES,ARR_CALM,ARR_WAVE,QUEUE_MAX
     }
   }
 })();
